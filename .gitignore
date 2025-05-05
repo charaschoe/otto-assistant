@@ -7,6 +7,7 @@ __pycache__/
 .env
 config.json
 .cache_ggshield
+client_secret_534581237338-v35pn0363encbfmud73q01981loqi9v9.apps.googleusercontent.com.json
 
 # Audio files
 *.wav

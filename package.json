@@ -15,8 +15,10 @@
 	"dependencies": {
 		"@google/generative-ai": "^0.24.1",
 		"@notionhq/client": "^2.3.0",
-		"dotenv": "^16.4.1",
-		"mic": "^2.1.2"
+		"dotenv": "^16.5.0",
+		"googleapis": "^148.0.0",
+		"mic": "^2.1.2",
+		"pdfkit": "^0.17.1"
 	},
 	"devDependencies": {
 		"eslint": "^8.56.0",

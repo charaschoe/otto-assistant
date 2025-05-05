@@ -1,8 +1,13 @@
 // gemini.js
 const { GoogleGenerativeAI } = require("@google/generative-ai");
-require("dotenv").config();
+const fs = require("fs");
+const path = require("path");
+const configPath = path.join(__dirname, "../../config.json");
+const config = JSON.parse(fs.readFileSync(configPath, "utf8"));
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+console.log("Using GEMINI_API_KEY:", config.GEMINI_API_KEY);
+
+const genAI = new GoogleGenerativeAI(config.GEMINI_API_KEY);
 
 async function summarizeTranscript(text) {
 	const model = genAI.getGenerativeModel({

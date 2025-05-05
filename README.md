@@ -4,11 +4,30 @@ Ein intelligenter Sprachassistent, der Audio aufnimmt, transkribiert, zusammenfa
 
 ## Features
 
--   🎙️ Audioaufnahme
--   🧠 Transkription mit Whisper
--   📝 Speicherung in Obsidian
--   🤖 Zusammenfassung mit Google Gemini
--   📚 Export zu Notion
+### Implemented Features
+- **Notion Integration**: Export transcripts and summaries to Notion.
+- **Obsidian Integration**: Save transcripts and summaries to Obsidian.
+
+### Planned Features (Not Yet Implemented)
+- **Google Docs**: Export the transcript or summary to a Google Docs file.
+- **CSV Export**: Save structured data (e.g., tasks, ideas) in a CSV format.
+- **PDF Export**: Generate a PDF version of the transcript or summary.
+- **Microsoft Teams**: Share the summary or transcript in a Teams channel.
+- **Trello**: Add tasks or ideas as Trello cards.
+- **Asana**: Create tasks in Asana based on the transcript.
+- **Google Drive**: Save the transcript or summary to a Google Drive folder.
+- **Dropbox**: Upload the file to Dropbox for easy sharing.
+- **WhatsApp**: Send the summary or transcript via WhatsApp.
+- **Telegram**: Share the output in a Telegram group or chat.
+- **Sentiment Analysis**: Analyze the sentiment of the transcript (positive, neutral, negative).
+- **Keyword Extraction**: Highlight key topics or phrases from the transcript.
+- **Action Item Detection**: Automatically detect and list action items.
+- **Zapier**: Trigger workflows in Zapier for further automation.
+- **Custom Webhook**: Send the output to a custom webhook for integration with other systems.
+- **Markdown**: Save the output in Markdown format (useful for developers or documentation).
+- **HTML**: Generate an HTML file for web-based sharing.
+- **Translation**: Translate the transcript or summary into another language.
+- **Multilingual Support**: Allow transcription in multiple languages.
 
 ## Voraussetzungen
 

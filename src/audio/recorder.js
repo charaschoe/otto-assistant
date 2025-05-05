@@ -1,33 +1,40 @@
 // recorder.js
-const fs = require("fs");
-const mic = require("mic");
-const path = require("path");
+const fs = require('fs');
+const path = require('path');
+const { spawn } = require('child_process');
 
-function recordAudio(filename = "recording.wav", duration = 10000) {
-	return new Promise((resolve, reject) => {
-		const filePath = path.join(__dirname, "audio", filename);
-		const micInstance = mic({
-			rate: "16000",
-			channels: "1",
-			debug: false,
-			exitOnSilence: 6,
-			fileType: "wav",
-		});
-
-		const micInputStream = micInstance.getAudioStream();
-		const outputFileStream = fs.WriteStream(filePath);
-
-		micInputStream.pipe(outputFileStream);
-
-		micInputStream.on("error", (err) => reject(err));
-		outputFileStream.on("finish", () => resolve(filePath));
-
-		micInstance.start();
-
-		setTimeout(() => {
-			micInstance.stop();
-		}, duration); // Aufnahmezeit in ms
-	});
+function recordAudio(filename, duration) {
+  return new Promise((resolve, reject) => {
+    const outputDir = path.join(__dirname, '../recordings');
+    
+    if (!fs.existsSync(outputDir)) {
+      fs.mkdirSync(outputDir, { recursive: true });
+    }
+    
+    const outputPath = path.join(outputDir, filename);
+    
+    console.log(`Recording to ${outputPath}`);
+    
+    // Modified to record for the full duration without silence detection
+    const rec = spawn('rec', [
+      '-c', '1', 
+      outputPath, 
+      'rate', '16k',
+      'trim', '0', `${duration/1000}` // Record for exact duration in seconds
+    ]);
+    
+    rec.stderr.on('data', (data) => {
+      console.log(`rec stderr: ${data}`);
+    });
+    
+    rec.on('close', (code) => {
+      if (code === 0) {
+        resolve(outputPath);
+      } else {
+        reject(new Error(`Recording process exited with code ${code}`));
+      }
+    });
+  });
 }
 
 module.exports = { recordAudio };
