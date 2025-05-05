@@ -1,5 +1,5 @@
 // Supabase Konfiguration
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from "@supabase/supabase-js";
 
 // Supabase URL und API-Schlüssel sollten als Umgebungsvariablen gesetzt werden
 const supabaseUrl = process.env.SUPABASE_URL;

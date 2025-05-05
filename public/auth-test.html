@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="de">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Supabase Auth-Test</title>
+		<style>
+			body {
+				font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
+					Roboto, sans-serif;
+				max-width: 800px;
+				margin: 0 auto;
+				padding: 20px;
+			}
+			.hidden {
+				display: none;
+			}
+			.form-group {
+				margin-bottom: 15px;
+			}
+			label {
+				display: block;
+				margin-bottom: 5px;
+			}
+			input {
+				padding: 8px;
+				width: 100%;
+				max-width: 300px;
+			}
+			button {
+				padding: 8px 16px;
+				background-color: #3e8ed0;
+				color: white;
+				border: none;
+				border-radius: 4px;
+				cursor: pointer;
+			}
+			button.secondary {
+				background-color: #f5f5f5;
+				color: #333;
+				border: 1px solid #ddd;
+			}
+			button.danger {
+				background-color: #f14668;
+			}
+			.message {
+				padding: 10px;
+				background-color: #effaf5;
+				border: 1px solid #48c78e;
+				border-radius: 4px;
+				margin-bottom: 20px;
+			}
+			.section {
+				margin-bottom: 30px;
+				padding: 20px;
+				border: 1px solid #eee;
+				border-radius: 8px;
+			}
+			.api-key-display {
+				font-family: monospace;
+				background-color: #f5f5f5;
+				padding: 10px;
+				border-radius: 4px;
+				margin-top: 10px;
+				overflow-wrap: break-word;
+			}
+		</style>
+		<!-- Supabase JS Client laden -->
+		<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+	</head>
+	<body>
+		<h1>Supabase Auth & API-Schlüssel Test</h1>
+
+		<div id="auth-message" class="message hidden">Nicht angemeldet</div>
+
+		<div id="login-form" class="section">
+			<h2>Anmelden / Registrieren</h2>
+			<div class="form-group">
+				<label for="login-email">E-Mail</label>
+				<input
+					type="email"
+					id="login-email"
+					placeholder="Ihre E-Mail"
+				/>
+			</div>
+			<div class="form-group">
+				<label for="login-password">Passwort</label>
+				<input
+					type="password"
+					id="login-password"
+					placeholder="Ihr Passwort"
+				/>
+			</div>
+			<div class="form-actions">
+				<button id="login-button">Anmelden</button>
+				<button id="register-button" class="secondary">
+					Registrieren
+				</button>
+			</div>
+		</div>
+
+		<div id="api-keys-section" class="section hidden">
+			<h2>API-Schlüssel verwalten</h2>
+
+			<div class="form-group">
+				<h3>OpenAI API-Schlüssel (für Transkription)</h3>
+				<input type="password" id="openai-key" placeholder="sk-..." />
+				<button id="save-openai-key">Speichern</button>
+				<button id="get-openai-key" class="secondary">Abrufen</button>
+				<div
+					id="openai-key-display"
+					class="api-key-display hidden"
+				></div>
+			</div>
+
+			<div class="form-group">
+				<h3>Gemini API-Schlüssel (für KI-Assistenz)</h3>
+				<input
+					type="password"
+					id="gemini-key"
+					placeholder="Gemini API-Schlüssel"
+				/>
+				<button id="save-gemini-key">Speichern</button>
+				<button id="get-gemini-key" class="secondary">Abrufen</button>
+				<div
+					id="gemini-key-display"
+					class="api-key-display hidden"
+				></div>
+			</div>
+		</div>
+
+		<button id="logout-button" class="danger hidden">Abmelden</button>
+
+		<script src="auth-test.js"></script>
+		<script>
+			// Diese Funktion ruft das Backend auf, um API-Schlüssel zu speichern/abzurufen
+			// Im echten Projekt würden wir die Supabase-Tabellen dafür verwenden
+			document.addEventListener("DOMContentLoaded", () => {
+				// API-Schlüssel-Buttons
+				const saveOpenAIButton =
+					document.getElementById("save-openai-key");
+				const getOpenAIButton =
+					document.getElementById("get-openai-key");
+				const openAIKeyInput = document.getElementById("openai-key");
+				const openAIKeyDisplay =
+					document.getElementById("openai-key-display");
+
+				const saveGeminiButton =
+					document.getElementById("save-gemini-key");
+				const getGeminiButton =
+					document.getElementById("get-gemini-key");
+				const geminiKeyInput = document.getElementById("gemini-key");
+				const geminiKeyDisplay =
+					document.getElementById("gemini-key-display");
+
+				// OpenAI API-Schlüssel speichern
+				saveOpenAIButton.addEventListener("click", async () => {
+					const openaiKey = openAIKeyInput.value.trim();
+
+					if (!openaiKey) {
+						alert("Bitte geben Sie einen API-Schlüssel ein.");
+						return;
+					}
+
+					// Bei einem echten Projekt würden wir hier die Supabase-Tabelle verwenden
+					try {
+						// Hole den aktuellen Benutzer
+						const {
+							data: { user },
+						} = await supabase.auth.getUser();
+
+						if (!user) {
+							alert(
+								"Sie müssen angemeldet sein, um API-Schlüssel zu speichern."
+							);
+							return;
+						}
+
+						// In der credentials-Tabelle speichern
+						const { data, error } = await supabase
+							.from("credentials")
+							.upsert(
+								{
+									user_id: user.id,
+									service: "openai",
+									data: openaiKey,
+								},
+								{
+									onConflict: "user_id,service",
+								}
+							);
+
+						if (error) throw error;
+
+						alert("OpenAI API-Schlüssel gespeichert!");
+						openAIKeyInput.value = "";
+					} catch (error) {
+						console.error(
+							"Fehler beim Speichern des API-Schlüssels:",
+							error
+						);
+						alert(`Fehler: ${error.message}`);
+					}
+				});
+
+				// OpenAI API-Schlüssel abrufen
+				getOpenAIButton.addEventListener("click", async () => {
+					try {
+						// Hole den aktuellen Benutzer
+						const {
+							data: { user },
+						} = await supabase.auth.getUser();
+
+						if (!user) {
+							alert(
+								"Sie müssen angemeldet sein, um API-Schlüssel abzurufen."
+							);
+							return;
+						}
+
+						// Aus der credentials-Tabelle abrufen
+						const { data, error } = await supabase
+							.from("credentials")
+							.select("data")
+							.eq("user_id", user.id)
+							.eq("service", "openai")
+							.single();
+
+						if (error) {
+							if (error.code === "PGRST116") {
+								alert("Kein OpenAI API-Schlüssel gefunden.");
+							} else {
+								throw error;
+							}
+							return;
+						}
+
+						// Schlüssel anzeigen
+						openAIKeyDisplay.textContent = data.data;
+						openAIKeyDisplay.classList.remove("hidden");
+					} catch (error) {
+						console.error(
+							"Fehler beim Abrufen des API-Schlüssels:",
+							error
+						);
+						alert(`Fehler: ${error.message}`);
+					}
+				});
+
+				// Gemini API-Schlüssel speichern (gleiche Logik wie für OpenAI)
+				saveGeminiButton.addEventListener("click", async () => {
+					const geminiKey = geminiKeyInput.value.trim();
+
+					if (!geminiKey) {
+						alert("Bitte geben Sie einen API-Schlüssel ein.");
+						return;
+					}
+
+					try {
+						const {
+							data: { user },
+						} = await supabase.auth.getUser();
+
+						if (!user) {
+							alert(
+								"Sie müssen angemeldet sein, um API-Schlüssel zu speichern."
+							);
+							return;
+						}
+
+						const { data, error } = await supabase
+							.from("credentials")
+							.upsert(
+								{
+									user_id: user.id,
+									service: "gemini",
+									data: geminiKey,
+								},
+								{
+									onConflict: "user_id,service",
+								}
+							);
+
+						if (error) throw error;
+
+						alert("Gemini API-Schlüssel gespeichert!");
+						geminiKeyInput.value = "";
+					} catch (error) {
+						console.error(
+							"Fehler beim Speichern des API-Schlüssels:",
+							error
+						);
+						alert(`Fehler: ${error.message}`);
+					}
+				});
+
+				// Gemini API-Schlüssel abrufen
+				getGeminiButton.addEventListener("click", async () => {
+					try {
+						const {
+							data: { user },
+						} = await supabase.auth.getUser();
+
+						if (!user) {
+							alert(
+								"Sie müssen angemeldet sein, um API-Schlüssel abzurufen."
+							);
+							return;
+						}
+
+						const { data, error } = await supabase
+							.from("credentials")
+							.select("data")
+							.eq("user_id", user.id)
+							.eq("service", "gemini")
+							.single();
+
+						if (error) {
+							if (error.code === "PGRST116") {
+								alert("Kein Gemini API-Schlüssel gefunden.");
+							} else {
+								throw error;
+							}
+							return;
+						}
+
+						geminiKeyDisplay.textContent = data.data;
+						geminiKeyDisplay.classList.remove("hidden");
+					} catch (error) {
+						console.error(
+							"Fehler beim Abrufen des API-Schlüssels:",
+							error
+						);
+						alert(`Fehler: ${error.message}`);
+					}
+				});
+			});
+		</script>
+	</body>
+</html>

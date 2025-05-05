@@ -1,212 +1,275 @@
 <!DOCTYPE html>
 <html lang="de">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Otto Transkriptionsassistent</title>
-  <link rel="stylesheet" href="styles.css">
-</head>
-<body>
-  <div id="app-container">
-    <div id="login-container" class="container">
-      <h1>Otto Transkriptionsassistent</h1>
-      <div class="section">
-        <h2>Anmeldung</h2>
-        <div class="form-group">
-          <label for="login-email">E-Mail</label>
-          <input type="email" id="login-email" placeholder="Deine E-Mail-Adresse">
-        </div>
-        <div class="form-group">
-          <label for="login-password">Passwort</label>
-          <input type="password" id="login-password" placeholder="Dein Passwort">
-        </div>
-        <div class="button-group">
-          <button id="login-button" class="btn primary">Anmelden</button>
-          <button id="register-button" class="btn secondary">Registrieren</button>
-        </div>
-        <p class="text-center">
-          <a href="#" id="forgot-password-link">Passwort vergessen?</a>
-        </p>
-      </div>
-    </div>
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Otto Assistant - Transkription</title>
+		<link rel="stylesheet" href="styles.css" />
+		<link
+			rel="stylesheet"
+			href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
+		/>
+	</head>
+	<body>
+		<div class="container">
+			<header>
+				<h1>Otto Assistant - Transkription</h1>
+				<p>Transkription mit lokaler Whisper-Integration</p>
+			</header>
 
-    <div id="main-container" class="container hidden">
-      <h1>Otto Transkriptionsassistent</h1>
-      
-      <!-- Tabs Navigation -->
-      <div class="tabs">
-        <button class="tab-btn active" data-tab="transcribe">Transkribieren</button>
-        <button class="tab-btn" data-tab="history">Verlauf</button>
-        <button class="tab-btn" data-tab="settings">Einstellungen</button>
-        <button id="logout-button" class="tab-btn logout">Abmelden</button>
-      </div>
-      
-      <!-- Transkribieren Tab -->
-      <div id="transcribe-tab" class="tab-content active">
-        <div class="section">
-          <h2>Transkription</h2>
-          <div class="output-options">
-            <h3>Ausgabeoptionen</h3>
-            <div class="checkbox-group">
-              <input type="checkbox" id="notion-output" value="1">
-              <label for="notion-output">Notion</label>
-            </div>
-            <div class="checkbox-group">
-              <input type="checkbox" id="obsidian-output" value="2">
-              <label for="obsidian-output">Obsidian</label>
-            </div>
-            <div class="checkbox-group">
-              <input type="checkbox" id="markdown-output" value="21">
-              <label for="markdown-output">Markdown</label>
-            </div>
-            <div class="checkbox-group">
-              <input type="checkbox" id="pdf-output" value="8">
-              <label for="pdf-output">PDF Export</label>
-            </div>
-            <div class="checkbox-group">
-              <input type="checkbox" id="csv-output" value="7">
-              <label for="csv-output">CSV Export</label>
-            </div>
-            <div class="checkbox-group">
-              <input type="checkbox" id="gdrive-output" value="12">
-              <label for="gdrive-output">Google Drive</label>
-            </div>
-            <div class="checkbox-group">
-              <input type="checkbox" id="summary-output" value="summary">
-              <label for="summary-output">Zusammenfassung (Gemini)</label>
-            </div>
-          </div>
-          
-          <div class="form-group">
-            <label for="transcript-title">Titel</label>
-            <input type="text" id="transcript-title" placeholder="Titel der Transkription">
-          </div>
-          
-          <div class="recording-section">
-            <button id="start-recording" class="btn primary">Aufnahme starten</button>
-            <button id="stop-recording" class="btn secondary" disabled>Aufnahme stoppen</button>
-            <div id="recording-status" class="status-indicator">Bereit</div>
-            <div id="recording-time" class="timer">00:00</div>
-          </div>
-          
-          <div id="transcript-result" class="result-section hidden">
-            <h3>Transkription</h3>
-            <div id="transcript-loader" class="loader hidden"></div>
-            <div id="transcript-content" class="content-box"></div>
-            
-            <div id="summary-result" class="summary-section hidden">
-              <h3>Zusammenfassung</h3>
-              <div id="summary-content" class="content-box"></div>
-            </div>
-            
-            <div class="action-buttons">
-              <button id="download-transcript" class="btn secondary">Herunterladen</button>
-              <button id="copy-transcript" class="btn secondary">Kopieren</button>
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      <!-- Verlauf Tab -->
-      <div id="history-tab" class="tab-content">
-        <div class="section">
-          <h2>Transkriptionsverlauf</h2>
-          <div id="history-list" class="list-container">
-            <div class="loader"></div>
-          </div>
-          <div id="history-details" class="details-container hidden">
-            <h3 id="history-title">Transkript-Titel</h3>
-            <div class="meta-info">
-              <span id="history-date">Datum</span>
-            </div>
-            <div id="history-content" class="content-box"></div>
-            <div class="action-buttons">
-              <button id="history-download" class="btn secondary">Herunterladen</button>
-              <button id="history-copy" class="btn secondary">Kopieren</button>
-              <button id="history-back" class="btn tertiary">Zurück zur Liste</button>
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      <!-- Einstellungen Tab -->
-      <div id="settings-tab" class="tab-content">
-        <div class="section">
-          <h2>API Schlüssel & Einstellungen</h2>
-          
-          <div class="settings-group">
-            <h3>OpenAI / Whisper (Transkription)</h3>
-            <div class="form-group">
-              <label for="openai-key">OpenAI API Schlüssel</label>
-              <input type="password" id="openai-key" placeholder="sk-...">
-              <p class="helper-text">Wird für die Transkription mit dem Whisper-Modell verwendet.</p>
-            </div>
-            <button id="save-openai" class="btn secondary">Speichern</button>
-          </div>
-          
-          <div class="settings-group">
-            <h3>Google Gemini (KI-Assistenz)</h3>
-            <div class="form-group">
-              <label for="gemini-key">Gemini API Schlüssel</label>
-              <input type="password" id="gemini-key" placeholder="API Schlüssel eingeben">
-              <p class="helper-text">Wird für Zusammenfassungen und intelligente Textverarbeitung verwendet.</p>
-            </div>
-            <button id="save-gemini" class="btn secondary">Speichern</button>
-          </div>
-          
-          <div class="settings-group">
-            <h3>Notion</h3>
-            <div class="form-group">
-              <label for="notion-token">Notion API Token</label>
-              <input type="password" id="notion-token" placeholder="Notion API Token eingeben">
-            </div>
-            <div class="form-group">
-              <label for="notion-database">Notion Datenbank-ID</label>
-              <input type="text" id="notion-database" placeholder="Datenbank-ID eingeben">
-            </div>
-            <button id="save-notion" class="btn secondary">Speichern</button>
-          </div>
-          
-          <div class="settings-group">
-            <h3>Obsidian</h3>
-            <p class="info-text">Für die Obsidian-Integration benötigst du einen Webhook, der mit deinem Obsidian Vault kommunizieren kann.</p>
-            <div class="form-group">
-              <label for="obsidian-webhook">Obsidian Webhook URL</label>
-              <input type="text" id="obsidian-webhook" placeholder="https://your-obsidian-webhook.com">
-            </div>
-            <div class="form-group">
-              <label for="obsidian-vault">Vault Name</label>
-              <input type="text" id="obsidian-vault" placeholder="Hauptvault">
-            </div>
-            <button id="save-obsidian" class="btn secondary">Speichern</button>
-          </div>
-          
-          <div class="settings-group">
-            <h3>Google Drive</h3>
-            <div class="form-group">
-              <label for="google-credentials">Google API Credentials (JSON)</label>
-              <textarea id="google-credentials" placeholder="Füge dein Google API JSON hier ein"></textarea>
-            </div>
-            <button id="save-google" class="btn secondary">Speichern</button>
-          </div>
-        </div>
-      </div>
-    </div>
-    
-    <!-- Password Reset Modal -->
-    <div id="password-reset-modal" class="modal hidden">
-      <div class="modal-content">
-        <span class="close-modal">&times;</span>
-        <h2>Passwort zurücksetzen</h2>
-        <div class="form-group">
-          <label for="reset-email">E-Mail Adresse</label>
-          <input type="email" id="reset-email" placeholder="Deine E-Mail-Adresse">
-        </div>
-        <button id="request-reset" class="btn primary">Link senden</button>
-      </div>
-    </div>
-  </div>
+			<main>
+				<section id="status-section" class="card">
+					<h2>Status</h2>
+					<div id="status-info">
+						<p>Prüfe Systemstatus...</p>
+					</div>
+				</section>
 
-  <script src="app.js"></script>
-</body>
+				<section id="audio-section" class="card">
+					<h2>Audio</h2>
+					<div class="tabs">
+						<button class="tab-btn active" data-tab="record">
+							Aufnehmen
+						</button>
+						<button class="tab-btn" data-tab="upload">
+							Hochladen
+						</button>
+					</div>
+
+					<div id="record-tab" class="tab-content active">
+						<div class="record-container">
+							<div class="record-status">
+								<div
+									id="recording-status"
+									class="status-indicator"
+								>
+									Bereit
+								</div>
+								<div id="recording-timer">00:00</div>
+							</div>
+							<div class="record-buttons">
+								<button
+									id="start-recording"
+									class="btn primary"
+								>
+									<i class="fas fa-microphone"></i> Aufnahme
+									starten
+								</button>
+								<button
+									id="stop-recording"
+									class="btn secondary"
+									disabled
+								>
+									<i class="fas fa-stop"></i> Aufnahme stoppen
+								</button>
+							</div>
+							<div class="helper-text">
+								Drücken Sie "Aufnahme starten" und sprechen Sie
+								in Ihr Mikrofon. Die Aufnahme wird nach 10
+								Sekunden automatisch gestoppt.
+							</div>
+						</div>
+					</div>
+
+					<div id="upload-tab" class="tab-content">
+						<form id="upload-form">
+							<div class="form-group">
+								<label for="audio-file"
+									>Audio-Datei (MP3, WAV, M4A, etc.)</label
+								>
+								<input
+									type="file"
+									id="audio-file"
+									accept="audio/*"
+									required
+								/>
+							</div>
+							<div class="form-actions">
+								<button
+									type="submit"
+									id="submit-btn"
+									class="btn primary"
+								>
+									Hochladen
+								</button>
+							</div>
+						</form>
+					</div>
+				</section>
+
+				<section id="process-indicator" class="card hidden">
+					<h2>Fortschritt</h2>
+					<div class="process-steps">
+						<div class="step active" id="step-recording">
+							<div class="step-icon">
+								<i class="fas fa-microphone"></i>
+							</div>
+							<div class="step-label">Aufnahme</div>
+						</div>
+						<div class="step" id="step-transcribing">
+							<div class="step-icon">
+								<i class="fas fa-language"></i>
+							</div>
+							<div class="step-label">Transkription</div>
+						</div>
+						<div class="step" id="step-ai">
+							<div class="step-icon">
+								<i class="fas fa-robot"></i>
+							</div>
+							<div class="step-label">KI-Verarbeitung</div>
+						</div>
+						<div class="step" id="step-exporting">
+							<div class="step-icon">
+								<i class="fas fa-file-export"></i>
+							</div>
+							<div class="step-label">Export</div>
+						</div>
+					</div>
+					<div class="process-details" id="process-details">
+						Bereit zum Starten...
+					</div>
+				</section>
+
+				<section id="output-options-section" class="card">
+					<h2>Ausgabeoptionen</h2>
+					<div class="output-grid">
+						<div class="output-option">
+							<input type="checkbox" id="option-txt" checked />
+							<label for="option-txt">Textdatei (.txt)</label>
+						</div>
+
+						<div class="output-option">
+							<input type="checkbox" id="option-md" />
+							<label for="option-md">Markdown (.md)</label>
+						</div>
+
+						<div class="output-option">
+							<input type="checkbox" id="option-pdf" />
+							<label for="option-pdf">PDF-Dokument (.pdf)</label>
+						</div>
+
+						<div class="output-option">
+							<input
+								type="checkbox"
+								id="option-clipboard"
+								checked
+							/>
+							<label for="option-clipboard"
+								>In die Zwischenablage</label
+							>
+						</div>
+
+						<div class="output-option">
+							<input type="checkbox" id="option-obsidian" />
+							<label for="option-obsidian">Obsidian</label>
+							<input
+								type="text"
+								id="obsidian-vault"
+								placeholder="Vault-Pfad"
+								class="option-input"
+							/>
+						</div>
+
+						<div class="output-option">
+							<input type="checkbox" id="option-notion" />
+							<label for="option-notion">Notion</label>
+							<input
+								type="text"
+								id="notion-database"
+								placeholder="Datenbank-ID"
+								class="option-input"
+							/>
+						</div>
+
+						<div class="output-option">
+							<input
+								type="checkbox"
+								id="option-display"
+								checked
+							/>
+							<label for="option-display"
+								>Auf dem Bildschirm anzeigen</label
+							>
+						</div>
+
+						<div class="output-option">
+							<input type="checkbox" id="option-subtitles" />
+							<label for="option-subtitles"
+								>Untertitel (.srt/.vtt)</label
+							>
+						</div>
+
+						<div class="output-option">
+							<input type="checkbox" id="option-gemini" checked />
+							<label for="option-gemini"
+								>Google Gemini KI-Zusammenfassung</label
+							>
+						</div>
+					</div>
+				</section>
+
+				<section id="result-section" class="card hidden">
+					<h2>Transkriptionsergebnis</h2>
+					<div class="result-info">
+						<p>Datei: <span id="result-filename">-</span></p>
+						<p>Größe: <span id="result-filesize">-</span></p>
+						<p>
+							Verarbeitungszeit:
+							<span id="result-processing-time">-</span>
+						</p>
+					</div>
+					<div class="result-actions">
+						<button id="copy-btn" class="btn secondary">
+							<i class="fas fa-copy"></i> In Zwischenablage
+							kopieren
+						</button>
+						<button id="download-btn" class="btn secondary">
+							<i class="fas fa-download"></i> Als Datei
+							herunterladen
+						</button>
+						<button id="new-transcription-btn" class="btn primary">
+							<i class="fas fa-plus"></i> Neue Transkription
+						</button>
+					</div>
+					<div class="result-tabs">
+						<button class="result-tab active" data-tab="transcript">
+							Transkript
+						</button>
+						<button class="result-tab" data-tab="summary">
+							KI-Zusammenfassung
+						</button>
+					</div>
+					<div class="result-content-container">
+						<div
+							id="transcript-content"
+							class="result-content active"
+						>
+							<pre id="result-text"></pre>
+						</div>
+						<div id="summary-content" class="result-content">
+							<div id="summary-text"></div>
+						</div>
+					</div>
+				</section>
+
+				<section id="loading-section" class="card hidden">
+					<h2>Verarbeitung läuft...</h2>
+					<div class="loading-spinner"></div>
+					<p id="loading-message">
+						Die Audiodatei wird transkribiert. Dies kann einige
+						Minuten dauern...
+					</p>
+				</section>
+			</main>
+
+			<footer>
+				<p>
+					Otto Transkriptionsassistent &copy; 2023 - Lokale
+					Whisper-Transkription
+				</p>
+			</footer>
+		</div>
+
+		<script src="app.js"></script>
+	</body>
 </html>

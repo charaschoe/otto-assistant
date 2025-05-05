@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="de">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Supabase Auth-Test (Vereinfacht)</title>
+		<style>
+			body {
+				font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
+					Roboto, sans-serif;
+				max-width: 800px;
+				margin: 0 auto;
+				padding: 20px;
+			}
+			.hidden {
+				display: none;
+			}
+			.form-group {
+				margin-bottom: 15px;
+			}
+			label {
+				display: block;
+				margin-bottom: 5px;
+			}
+			input {
+				padding: 8px;
+				width: 100%;
+				max-width: 300px;
+			}
+			button {
+				padding: 8px 16px;
+				background-color: #3e8ed0;
+				color: white;
+				border: none;
+				border-radius: 4px;
+				cursor: pointer;
+				margin-right: 10px;
+			}
+			.message {
+				padding: 10px;
+				background-color: #effaf5;
+				border: 1px solid #48c78e;
+				border-radius: 4px;
+				margin: 20px 0;
+			}
+			.error {
+				background-color: #feecf0;
+				border-color: #f14668;
+			}
+		</style>
+		<!-- Supabase JS Client laden -->
+		<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+	</head>
+	<body>
+		<h1>Supabase Auth-Test (Vereinfacht)</h1>
+
+		<div id="auth-status" class="message hidden">
+			Status: nicht angemeldet
+		</div>
+
+		<div id="error-message" class="message error hidden">
+			Fehler wird hier angezeigt
+		</div>
+
+		<div id="auth-form">
+			<h2>Anmelden / Registrieren</h2>
+			<div class="form-group">
+				<label for="email">E-Mail</label>
+				<input type="email" id="email" placeholder="Ihre E-Mail" />
+			</div>
+			<div class="form-group">
+				<label for="password">Passwort</label>
+				<input
+					type="password"
+					id="password"
+					placeholder="Ihr Passwort"
+				/>
+			</div>
+			<div class="form-actions">
+				<button id="login-btn">Anmelden</button>
+				<button id="signup-btn">Registrieren</button>
+				<button id="logout-btn" class="hidden">Abmelden</button>
+			</div>
+		</div>
+
+		<script>
+			// Supabase Client initialisieren
+			const supabaseUrl = "https://rbbeytzjbahcossmktis.supabase.co";
+			const supabaseKey =
+				"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJiYmV5dHpqYmFoY29zc21rdGlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDY0NjgzNDIsImV4cCI6MjA2MjA0NDM0Mn0.F8kjBTAy0uiUhZYKlmbE-fWr7BoGz2kN4n5lpkdMRE4";
+
+			// Korrekt initialisieren mit globaler Supabase-Variablen
+			const supabase = window.supabase.createClient(
+				supabaseUrl,
+				supabaseKey
+			);
+
+			// DOM-Elemente
+			const authStatus = document.getElementById("auth-status");
+			const errorMessage = document.getElementById("error-message");
+			const emailInput = document.getElementById("email");
+			const passwordInput = document.getElementById("password");
+			const loginBtn = document.getElementById("login-btn");
+			const signupBtn = document.getElementById("signup-btn");
+			const logoutBtn = document.getElementById("logout-btn");
+
+			// Fehler anzeigen
+			function showError(message) {
+				errorMessage.textContent = message;
+				errorMessage.classList.remove("hidden");
+				setTimeout(() => {
+					errorMessage.classList.add("hidden");
+				}, 5000);
+			}
+
+			// Auth-Status aktualisieren
+			async function updateAuthUI() {
+				try {
+					const { data, error } = await supabase.auth.getSession();
+
+					if (error) throw error;
+
+					if (data.session) {
+						// Benutzer ist angemeldet
+						authStatus.textContent = `Angemeldet als: ${data.session.user.email}`;
+						authStatus.classList.remove("hidden");
+						logoutBtn.classList.remove("hidden");
+					} else {
+						// Benutzer ist nicht angemeldet
+						authStatus.classList.add("hidden");
+						logoutBtn.classList.add("hidden");
+					}
+				} catch (error) {
+					showError(
+						`Fehler beim Abrufen des Auth-Status: ${error.message}`
+					);
+				}
+			}
+
+			// Beim Laden der Seite ausführen
+			document.addEventListener("DOMContentLoaded", () => {
+				updateAuthUI();
+
+				// Login Button
+				loginBtn.addEventListener("click", async () => {
+					try {
+						const email = emailInput.value.trim();
+						const password = passwordInput.value;
+
+						if (!email || !password) {
+							return showError(
+								"Bitte E-Mail und Passwort eingeben"
+							);
+						}
+
+						const { data, error } =
+							await supabase.auth.signInWithPassword({
+								email,
+								password,
+							});
+
+						if (error) throw error;
+
+						updateAuthUI();
+						emailInput.value = "";
+						passwordInput.value = "";
+					} catch (error) {
+						showError(`Anmeldung fehlgeschlagen: ${error.message}`);
+					}
+				});
+
+				// Signup Button
+				signupBtn.addEventListener("click", async () => {
+					try {
+						const email = emailInput.value.trim();
+						const password = passwordInput.value;
+
+						if (!email || !password) {
+							return showError(
+								"Bitte E-Mail und Passwort eingeben"
+							);
+						}
+
+						const { data, error } = await supabase.auth.signUp({
+							email,
+							password,
+						});
+
+						if (error) throw error;
+
+						authStatus.textContent =
+							"Registrierung erfolgreich! Bitte prüfen Sie Ihre E-Mails.";
+						authStatus.classList.remove("hidden");
+						emailInput.value = "";
+						passwordInput.value = "";
+					} catch (error) {
+						showError(
+							`Registrierung fehlgeschlagen: ${error.message}`
+						);
+					}
+				});
+
+				// Logout Button
+				logoutBtn.addEventListener("click", async () => {
+					try {
+						const { error } = await supabase.auth.signOut();
+
+						if (error) throw error;
+
+						updateAuthUI();
+					} catch (error) {
+						showError(`Abmeldung fehlgeschlagen: ${error.message}`);
+					}
+				});
+			});
+		</script>
+	</body>
+</html>
