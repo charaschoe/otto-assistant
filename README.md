@@ -1,126 +1,104 @@
 # Otto Assistant
 
-Ein intelligenter Sprachassistent, der Audio aufnimmt, transkribiert, zusammenfasst und in Obsidian und Notion speichert.
+Otto ist ein KI-gestützter persönlicher Assistent, der Audioaufnahmen transkribiert und in verschiedene Formate und Plattformen exportieren kann.
 
-## Features
+## Funktionen
 
-### Implemented Features
-
--   **Notion Integration**: Export transcripts and summaries to Notion.
--   **Obsidian Integration**: Save transcripts and summaries to Obsidian.
-
-### Planned Features (Not Yet Implemented)
-
--   **Google Docs**: Export the transcript or summary to a Google Docs file.
--   **CSV Export**: Save structured data (e.g., tasks, ideas) in a CSV format.
--   **PDF Export**: Generate a PDF version of the transcript or summary.
--   **Microsoft Teams**: Share the summary or transcript in a Teams channel.
--   **Trello**: Add tasks or ideas as Trello cards.
--   **Asana**: Create tasks in Asana based on the transcript.
--   **Google Drive**: Save the transcript or summary to a Google Drive folder.
--   **Dropbox**: Upload the file to Dropbox for easy sharing.
--   **WhatsApp**: Send the summary or transcript via WhatsApp.
--   **Telegram**: Share the output in a Telegram group or chat.
--   **Sentiment Analysis**: Analyze the sentiment of the transcript (positive, neutral, negative).
--   **Keyword Extraction**: Highlight key topics or phrases from the transcript.
--   **Action Item Detection**: Automatically detect and list action items.
--   **Zapier**: Trigger workflows in Zapier for further automation.
--   **Custom Webhook**: Send the output to a custom webhook for integration with other systems.
--   **Markdown**: Save the output in Markdown format (useful for developers or documentation).
--   **HTML**: Generate an HTML file for web-based sharing.
--   **Translation**: Translate the transcript or summary into another language.
--   **Multilingual Support**: Allow transcription in multiple languages.
+-   **Audioaufnahme**: Nimmt Audio für eine bestimmte Dauer auf
+-   **Transkription**: Verwendet Whisper zur Spracherkennung und Transkription
+-   **Zusammenfassung**: Generiert Zusammenfassungen von Transkripten mit Google Gemini
+-   **Integrationen**:
+    -   ✅ Notion Export
+    -   ✅ Obsidian Export
+    -   ✅ Google Drive Upload
+    -   ✅ Markdown Export
+    -   ✅ PDF Export
+    -   ✅ CSV Export
+    -   ❌ Miro (noch nicht implementiert)
+    -   ❌ Slack (noch nicht implementiert)
+    -   ❌ Email (noch nicht implementiert)
+    -   ❌ Google Docs (noch nicht implementiert)
+    -   ❌ Microsoft Teams (noch nicht implementiert)
+    -   ❌ Trello (noch nicht implementiert)
+    -   ❌ Asana (noch nicht implementiert)
+    -   ❌ Dropbox (noch nicht implementiert)
+    -   ❌ WhatsApp (noch nicht implementiert)
+    -   ❌ Telegram (noch nicht implementiert)
+    -   ❌ Zapier (noch nicht implementiert)
+    -   ❌ Custom Webhook (noch nicht implementiert)
+    -   ❌ HTML Export (noch nicht implementiert)
+-   **Analyseoptionen**:
+    -   ❌ Stimmungsanalyse (noch nicht implementiert)
+    -   ❌ Stichwortextraktion (noch nicht implementiert)
+    -   ❌ Erkennung von Aktionspunkten (noch nicht implementiert)
+    -   ❌ Übersetzung (noch nicht implementiert)
+    -   ❌ Mehrsprachige Unterstützung (noch nicht implementiert)
 
 ## Voraussetzungen
 
--   Node.js (v14 oder höher)
--   Python 3.x
--   Whisper (Python-Paket)
--   Notion API Token
--   Google Gemini API Key
+-   Node.js
+-   Python 3
+-   Whisper (für Transkription)
+-   Google Cloud API-Zugang (für Gemini und Google Drive)
+-   Notion API-Zugang (für Notion-Export)
+-   Obsidian (für lokale Markdown-Integration)
 
 ## Installation
 
-1. Repository klonen:
-
 ```bash
-git clone [repository-url]
+# Repository klonen
+git clone https://github.com/yourusername/otto-assistant.git
 cd otto-assistant
-```
 
-2. Node.js Abhängigkeiten installieren:
-
-```bash
+# Abhängigkeiten installieren
 npm install
+
+# Python-Abhängigkeiten installieren
+pip3 install -r requirements.txt
 ```
 
-3. Python Abhängigkeiten installieren:
+## Konfiguration
 
-```bash
-pip install -r requirements.txt
-```
-
-4. Umgebungsvariablen einrichten:
-   Erstelle eine `.env` Datei im Root-Verzeichnis mit folgenden Variablen:
-
-```
-NOTION_API_KEY=dein_notion_api_key
-GEMINI_API_KEY=dein_gemini_api_key
-NOTION_DATABASE_ID=dein_database_id
-```
+1. Erstellen Sie einen `.env` Datei im Hauptverzeichnis mit folgenden Umgebungsvariablen:
+    ```
+    NOTION_API_KEY=your_notion_api_key
+    NOTION_DATABASE_ID=your_notion_database_id
+    OBSIDIAN_VAULT_PATH=path_to_your_obsidian_vault
+    GOOGLE_API_CREDENTIALS=path_to_your_google_credentials.json
+    GEMINI_API_KEY=your_gemini_api_key
+    ```
 
 ## Verwendung
 
-1. Starte den Assistant:
+Starten Sie die Anwendung mit:
 
 ```bash
-npm start
+node index.js
 ```
 
-oder direkt:
+Folgen Sie den Anweisungen in der Konsole, um:
 
-```bash
-node src/index.js
-```
-
-2. Die Aufnahme startet automatisch und läuft für 10 Sekunden
-3. Das Transkript wird automatisch in Obsidian gespeichert
-4. Eine Zusammenfassung wird erstellt und in Obsidian und Notion gespeichert
+1. Die gewünschten Exportoptionen auszuwählen
+2. Zu entscheiden, ob Sie ein Transkript möchten
+3. Eine Audioaufnahme zu starten
 
 ## Projektstruktur
 
 ```
-src/
-├── audio/
-│   └── recorder.js         # Audioaufnahme-Funktionalität
-├── transcription/
-│   └── whisper-transcribe.py # Whisper Transkription
-├── integrations/
-│   ├── obsidian-writer.js  # Obsidian Integration
-│   └── notion-export.js    # Notion Export
-├── utils/
-│   └── gemini.js          # Gemini API Integration
-└── index.js               # Hauptanwendung
+otto-assistant/
+├── index.js                 # Hauptanwendungsdatei
+├── src/
+│   ├── audio/               # Audio-Aufnahmefunktionen
+│   ├── transcription/       # Whisper-Transkription
+│   ├── integrations/        # Integrationen mit externen Diensten
+│   └── utils/               # Hilfsfunktionen und Exportfunktionen
+├── exports/                 # Exportierte Dateien
+└── README.md                # Projektdokumentation
 ```
-
-## Abhängigkeiten
-
-### Node.js Pakete
-
--   @google/generative-ai: ^0.24.1
--   @notionhq/client: ^2.3.0
--   mic: ^2.1.2
--   dotenv: ^16.4.1
-
-### Python Pakete
-
--   openai-whisper: >=20231117
--   numpy: >=1.24.0
--   torch: >=2.0.0
 
 ## Lizenz
 
-[Lizenzinformationen hier einfügen]
+MIT
 
 ## Support
 
