@@ -1,13 +1,12 @@
 // notion-export.js
 const { Client } = require("@notionhq/client");
-const fs = require("fs");
+require("dotenv").config();
 
-const config = JSON.parse(fs.readFileSync("./config.json", "utf-8"));
-const notion = new Client({ auth: config.NOTION_API_KEY });
+const notion = new Client({ auth: process.env.NOTION_API_KEY });
 
 async function exportToNotion(title, content) {
 	const response = await notion.pages.create({
-		parent: { database_id: config.NOTION_DATABASE_ID },
+		parent: { database_id: process.env.NOTION_DATABASE_ID },
 		properties: {
 			Name: {
 				title: [

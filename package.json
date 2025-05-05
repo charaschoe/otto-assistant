@@ -2,17 +2,29 @@
 	"name": "otto-assistant",
 	"version": "1.0.0",
 	"description": "Ein intelligenter Sprachassistent für Audioaufnahme, Transkription und Zusammenfassung",
-	"main": "index.js",
+	"main": "src/index.js",
 	"scripts": {
-		"test": "echo \"Error: no test specified\" && exit 1"
+		"start": "node src/index.js",
+		"lint": "eslint src/**/*.js",
+		"test": "jest",
+		"prepare": "husky install"
 	},
 	"keywords": [],
 	"author": "",
-	"license": "ISC",
+	"license": "MIT",
 	"description": "",
 	"dependencies": {
 		"@google/generative-ai": "^0.24.1",
 		"@notionhq/client": "^2.3.0",
+		"dotenv": "^16.4.1",
 		"mic": "^2.1.2"
+	},
+	"devDependencies": {
+		"eslint": "^8.56.0",
+		"husky": "^9.0.11",
+		"jest": "^29.7.0"
+	},
+	"engines": {
+		"node": ">=14.0.0"
 	}
 }
