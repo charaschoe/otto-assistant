@@ -1,92 +1,55 @@
-# Otto Assistant
+# Otto Sprachassistent
 
-Ein intelligenter Sprachassistent, der Audio aufnimmt, transkribiert, zusammenfasst und in Obsidian und Notion speichert.
+Ein einfacher Sprachassistent zur Transkription und Verarbeitung von Audiodateien mit dem Whisper-Modell.
 
-## Features
+## Überblick
 
--   🎙️ Audioaufnahme
--   🧠 Transkription mit Whisper
--   📝 Speicherung in Obsidian
--   🤖 Zusammenfassung mit Google Gemini
--   📚 Export zu Notion
+Der Otto Sprachassistent ist ein Tool, das Audiodateien transkribiert und die Transkription verarbeitet, um nützliche Informationen zu extrahieren.
 
-## Voraussetzungen
+## Anforderungen
 
--   Node.js (v14 oder höher)
--   Python 3.x
--   Whisper (Python-Paket)
--   Notion API Token
--   Google Gemini API Key
+-   Python 3.8 oder höher
+-   Installierte Abhängigkeiten (siehe [Installation](#installation))
 
 ## Installation
 
 1. Repository klonen:
 
 ```bash
-git clone [repository-url]
+git clone https://github.com/yourusername/otto-assistant.git
 cd otto-assistant
 ```
 
-2. Node.js Abhängigkeiten installieren:
+2. Abhängigkeiten installieren:
 
 ```bash
-npm install
-```
-
-3. Python Abhängigkeiten installieren:
-
-```bash
-pip install openai-whisper
-```
-
-4. Umgebungsvariablen einrichten:
-   Erstelle eine `.env` Datei im Root-Verzeichnis mit folgenden Variablen:
-
-```
-NOTION_API_KEY=dein_notion_api_key
-GEMINI_API_KEY=dein_gemini_api_key
+pip install -r requirements.txt
 ```
 
 ## Verwendung
 
-1. Starte den Assistant:
+### Audiodatei transkribieren
 
 ```bash
-node src/index.js
+python src/transcription/whisper-transcribe.py pfad/zur/audiodatei.mp3
 ```
 
-## Projektstruktur
+### Assistent verwenden
 
-```
-src/
-├── audio/
-│   └── recorder.js         # Audioaufnahme-Funktionalität
-├── transcription/
-│   └── whisper-transcribe.py # Whisper Transkription
-├── integrations/
-│   ├── obsidian-writer.js  # Obsidian Integration
-│   └── notion-export.js    # Notion Export
-├── utils/
-│   └── gemini.js          # Gemini API Integration
-└── index.js               # Hauptanwendung
+```bash
+python src/transcription/whisper-transcribe.py pfad/zur/audiodatei.mp3
 ```
 
-## Abhängigkeiten
+## Sicherheitshinweise
 
-### Node.js Pakete
-
--   @google/generative-ai: ^0.24.1
--   @notionhq/client: ^2.3.0
--   mic: ^2.1.2
-
-### Python Pakete
-
--   openai-whisper
+-   Die maximale Dateigröße für Audiodateien ist auf 100MB begrenzt
+-   Es werden nur gültige Audiodateien akzeptiert
+-   Alle Daten werden lokal verarbeitet und nicht dauerhaft gespeichert
 
 ## Lizenz
 
-[Lizenzinformationen hier einfügen]
+MIT
 
-## Support
+## Beitragende
 
-Bei Fragen oder Problemen, erstelle bitte ein Issue im Repository.
+Erstellt als Demo-Projekt für den Einsatz von KI-Modellen zur Sprachverarbeitung.
