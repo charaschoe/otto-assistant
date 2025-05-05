@@ -52,7 +52,7 @@ GEMINI_API_KEY=dein_gemini_api_key
 1. Starte den Assistant:
 
 ```bash
-node src/index.js
+npm start
 ```
 
 2. Die Aufnahme startet automatisch und läuft für 10 Sekunden
