@@ -5,8 +5,6 @@ const path = require("path");
 const configPath = path.join(__dirname, "../../config.json");
 const config = JSON.parse(fs.readFileSync(configPath, "utf8"));
 
-console.log("Using GEMINI_API_KEY:", config.GEMINI_API_KEY);
-
 const genAI = new GoogleGenerativeAI(config.GEMINI_API_KEY);
 
 async function summarizeTranscript(text) {
