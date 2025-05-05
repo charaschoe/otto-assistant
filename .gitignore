@@ -5,6 +5,10 @@ __pycache__/
 
 # Environment variables and config
 .env
+.env.local
+.env.development
+.env.test
+.env.production
 config.json
 .cache_ggshield
 client_secret_534581237338-v35pn0363encbfmud73q01981loqi9v9.apps.googleusercontent.com.json
@@ -24,6 +28,26 @@ Thumbs.db
 # Logs
 *.log
 npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
 # Testing
 coverage/
+
+# Node.js
+package-lock.json
+yarn.lock
+
+# Temporäre Dateien
+/uploads/
+/exports/
+*.sqlite
+database.sqlite
+
+# Build-Verzeichnisse
+/dist/
+/build/
+/.next/
+
+# Vercel
+.vercel
