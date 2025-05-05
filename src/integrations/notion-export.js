@@ -1,0 +1,43 @@
+// notion-export.js
+const { Client } = require("@notionhq/client");
+const fs = require("fs");
+
+const config = JSON.parse(fs.readFileSync("./config.json", "utf-8"));
+const notion = new Client({ auth: config.NOTION_API_KEY });
+
+async function exportToNotion(title, content) {
+	const response = await notion.pages.create({
+		parent: { database_id: config.NOTION_DATABASE_ID },
+		properties: {
+			Name: {
+				title: [
+					{
+						text: {
+							content: title,
+						},
+					},
+				],
+			},
+		},
+		children: [
+			{
+				object: "block",
+				type: "paragraph",
+				paragraph: {
+					rich_text: [
+						{
+							type: "text",
+							text: {
+								content,
+							},
+						},
+					],
+				},
+			},
+		],
+	});
+
+	console.log("📤 Notiz an Notion gesendet:", response.id);
+}
+
+module.exports = { exportToNotion };

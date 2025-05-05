@@ -1,0 +1,18 @@
+{
+	"name": "otto-assistant",
+	"version": "1.0.0",
+	"description": "Ein intelligenter Sprachassistent für Audioaufnahme, Transkription und Zusammenfassung",
+	"main": "index.js",
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1"
+	},
+	"keywords": [],
+	"author": "",
+	"license": "ISC",
+	"description": "",
+	"dependencies": {
+		"@google/generative-ai": "^0.24.1",
+		"@notionhq/client": "^2.3.0",
+		"mic": "^2.1.2"
+	}
+}
