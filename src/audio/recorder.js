@@ -9,7 +9,7 @@ const mic = require("mic");
  * @param {number} duration - Die Aufnahmedauer in Millisekunden
  * @returns {Promise<string>} - Der vollständige Pfad zur gespeicherten Audiodatei
  */
-function recordAudio(fileName, duration = 10000) {
+function recordAudio(fileName, duration = 25000) {
 	return new Promise((resolve, reject) => {
 		try {
 			// Erstelle den Ausgabepfad
@@ -44,6 +44,10 @@ function recordAudio(fileName, duration = 10000) {
 
 			// Beende die Aufnahme nach der angegebenen Dauer
 			setTimeout(() => {
+  console.log("Die Aufnahme wird in 5 Sekunden beendet...");
+}, duration - 5000);
+
+setTimeout(() => {
 				micInstance.stop();
 				console.log("Aufnahme beendet.");
 

@@ -10,10 +10,18 @@ const { spawn } = require("child_process");
 const path = require("path");
 const { generateTitle } = require("./utils/title-generator");
 
-(async () => {
-	console.log("🎙️ Starte Aufnahme (10 Sekunden)...");
-	const file = await recordAudio("test.wav", 10000);
-	console.log("✅ Aufnahme gespeichert:", file);
+const readline = require("readline");
+
+const rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout,
+});
+
+rl.question("Geben Sie 'start' ein, um die Aufnahme zu starten: ", async (answer) => {
+  if (answer.trim().toLowerCase() === "start") {
+    console.log("🎙️ Starte Aufnahme (25 Sekunden)...");
+    const file = await recordAudio("test.wav", 25000);
+    console.log("✅ Aufnahme gespeichert:", file);
 
 	const transcript = await transcribeAudio(file);
 
@@ -56,7 +64,12 @@ const { generateTitle } = require("./utils/title-generator");
 	} else {
 		console.log("⚠️ Kein Transkript gefunden.");
 	}
-})();
+    rl.close();
+  } else {
+    console.log("Ungültige Eingabe. Bitte 'start' eingeben.");
+    rl.close();
+  }
+});
 
 function transcribeAudio(audioFile) {
 	console.log("🧠 Starte Transkription...");
