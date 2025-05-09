@@ -4,31 +4,31 @@ const path = require("path");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 const templates = require("./summary-templates");
 
-// Lade die Konfiguration aus der config.json im Root-Verzeichnis
+ // Load the configuration from config.json in the root directory
 let config;
 try {
   const configPath = path.resolve(__dirname, "../../config.json");
   config = JSON.parse(fs.readFileSync(configPath, "utf8"));
 } catch (error) {
-  console.error("Fehler beim Laden der Konfiguration:", error.message);
+  console.error("Error loading configuration:", error.message);
   console.error(
-    "Bitte stelle sicher, dass eine gültige config.json im Root-Verzeichnis existiert."
+    "Please ensure a valid config.json exists in the root directory."
   );
   process.exit(1);
 }
 
-// Initialisiere die Gemini API
+ // Initialize the Gemini API
 const genAI = new GoogleGenerativeAI(config.GEMINI_API_KEY);
 
 /**
- * Analysiert einen Text und identifiziert den besten Vorlagentyp basierend auf dem Inhalt
- * @param {string} text - Der zu analysierende Text
- * @returns {string} - Der passende Vorlagentyp
+ * Analyzes a text and identifies the best template type based on the content
+ * @param {string} text - The text to analyze
+ * @returns {string} - The appropriate template type
  */
 function detectTemplateType(text) {
   text = text.toLowerCase();
 
-  // Erkennung von Meetings und Besprechungen
+  // Detection of meetings and discussions
   if (
     text.includes("meeting") ||
     text.includes("besprechung") ||
@@ -40,7 +40,7 @@ function detectTemplateType(text) {
     return "meeting";
   }
 
-  // Erkennung von Brainstorming
+  // Detection of brainstorming
   if (
     text.includes("brainstorming") ||
     text.includes("ideen") ||
@@ -52,7 +52,7 @@ function detectTemplateType(text) {
     return "brainstorming";
   }
 
-  // Erkennung von Lerninhalten
+  // Detection of learning content
   if (
     text.includes("lernen") ||
     text.includes("studium") ||
@@ -66,7 +66,7 @@ function detectTemplateType(text) {
     return "learning";
   }
 
-  // Erkennung von Projekten
+  // Detection of projects
   if (
     text.includes("projekt") ||
     text.includes("aufgabe") ||
@@ -79,7 +79,7 @@ function detectTemplateType(text) {
     return "project";
   }
 
-  // Erkennung von Forschung und Analyse
+  // Detection of research and analysis
   if (
     text.includes("forschung") ||
     text.includes("analyse") ||
@@ -93,7 +93,7 @@ function detectTemplateType(text) {
     return "research";
   }
 
-  // Erkennung von persönlichen Inhalten
+  // Detection of personal content
   if (
     text.includes("ich fühle") ||
     text.includes("persönlich") ||
@@ -107,60 +107,60 @@ function detectTemplateType(text) {
     return "personal";
   }
 
-  // Standardvorlage, wenn keine spezifische Kategorie erkannt wurde
+  // Default template if no specific category is detected
   return "standard";
 }
 
 /**
- * Füllt eine Vorlage mit Transkript-Daten aus
- * @param {string} template - Die zu verwendende Vorlage
- * @param {string} transcript - Das Transkript, das eingefügt werden soll
- * @returns {string} - Die ausgefüllte Vorlage
+ * Populates a template with transcript data
+ * @param {string} template - The template to use
+ * @param {string} transcript - The transcript to insert
+ * @returns {string} - The populated template
  */
 function applyTemplate(template, transcript) {
   return template.replace("{{transcript}}", transcript);
 }
 
 /**
- * Fasst einen Text mit Gemini zusammen
- * @param {string} text - Der zu zusammenfassende Text
- * @param {string} templateType - Optionaler Vorlagentyp (falls null, automatische Erkennung)
- * @returns {Promise<string>} - Die Zusammenfassung
+ * Summarizes a text using Gemini
+ * @param {string} text - The text to summarize
+ * @param {string} templateType - Optional template type (if null, automatic detection)
+ * @returns {Promise<string>} - The summary
  */
 async function summarize(text, templateType = null) {
   try {
-    // Verwende gemini-1.5-pro oder generative-ai-vision statt gemini-pro
+    // Use gemini-1.5-pro or generative-ai-vision instead of gemini-pro
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
 
-    // Verwende den angegebenen Vorlagentyp oder erkenne ihn automatisch
+    // Use the specified template type or detect it automatically
     const type = templateType || detectTemplateType(text);
     console.log(`🔍 Erkannter Vorlagentyp: ${type}`);
 
-    // Hole die passende Vorlage
+    // Retrieve the appropriate template
     const template = templates[type] || templates.standard;
 
-    // Fülle die Vorlage aus
+    // Populate the template
     const prompt = applyTemplate(template, text);
 
-    // Sende die Anfrage an Gemini
+    // Send the request to Gemini
     const result = await model.generateContent(prompt);
     const summary = result.response.text();
 
     return summary;
   } catch (error) {
     if (error.message.includes("429 Too Many Requests")) {
-      console.error("⚠️ API-Limit erreicht: Die Google Generative Language API hat das Anfragelimit überschritten.");
-      return "Zusammenfassung nicht möglich: API-Limit erreicht.";
+      console.error("⚠️ API limit reached: The Google Generative Language API has exceeded the request limit.");
+      return "Summary not possible: API limit reached.";
     }
-    console.error("Fehler bei der Zusammenfassung:", error.message);
+    console.error("Error during summarization:", error.message);
 
-    // Einfache Zusammenfassung ohne API
-    return `Zusammenfassung (ohne KI): ${text.split(".").slice(0, 2).join(".")}...`;
+    // Simple summary without API
+    return `Summary (without AI): ${text.split(".").slice(0, 2).join(".")}...`;
   }
 }
 
 /**
- * Alte Funktion für Abwärtskompatibilität
+ * Legacy function for backward compatibility
  */
 async function summarizeTranscript(transcript) {
   return summarize(transcript);

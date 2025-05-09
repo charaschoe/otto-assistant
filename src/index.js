@@ -5,7 +5,7 @@ try {
   const configPath = path.resolve(__dirname, "../config.json");
   config = JSON.parse(fs.readFileSync(configPath, "utf8"));
 } catch (error) {
-  console.warn("⚠️ config.json nicht gefunden oder ungültig. Standardwerte werden verwendet.");
+  console.warn("⚠️ config.json not found or invalid. Using default values.");
   config = {
     GEMINI_API_KEY: "default-key",
     NOTION_API_KEY: "default-key",
@@ -30,11 +30,11 @@ const rl = readline.createInterface({
   output: process.stdout,
 });
 
-rl.question("Geben Sie 'start' ein, um die Aufnahme zu starten: ", async (answer) => {
+rl.question("Enter 'start' to begin recording: ", async (answer) => {
   if (answer.trim().toLowerCase() === "start") {
-    console.log("🎙️ Starte Aufnahme (25 Sekunden)...");
+    console.log("🎙️ Starting recording (25 seconds)...");
     const file = await recordAudio("test.wav", 25000);
-    console.log("✅ Aufnahme gespeichert:", file);
+    console.log("✅ Recording saved:", file);
 
 	const transcript = await transcribeAudio(file);
 
@@ -75,11 +75,11 @@ rl.question("Geben Sie 'start' ein, um die Aufnahme zu starten: ", async (answer
 
 		console.log("✨ Verarbeitung abgeschlossen!");
 	} else {
-		console.log("⚠️ Kein Transkript gefunden.");
+		console.log("⚠️ No transcript found.");
 	}
     rl.close();
   } else {
-    console.log("Ungültige Eingabe. Bitte 'start' eingeben.");
+    console.log("Invalid input. Please enter 'start'.");
     rl.close();
   }
 });

@@ -6,21 +6,21 @@ const { summarize } = require("./gemini");
  * @param {string} defaultTitle - The default title if no keywords are found
  * @returns {Promise<string>} - The generated title
  */
-function generateTitle(transcript, defaultTitle = "Notiz") {
+function generateTitle(transcript, defaultTitle = "Note") {
   // If no transcript is available, use default title with date
   if (!transcript || transcript.trim() === "") {
-    return `${defaultTitle} ${new Date().toLocaleString("de-DE")}`;
+    return `${defaultTitle} ${new Date().toLocaleString("en-US")}`;
   }
 
   try {
     // Use Google Gemini to summarize the transcript
-  let summary = "";
-  try {
-    summary = summarize(transcript);
-  } catch (error) {
-    console.error("Error generating title with Gemini:", error.message);
-  }
-  return `${defaultTitle}: ${summary.substring(0, 50)}... - ${formatDate(new Date())}`;
+    let summary = "";
+    try {
+      summary = summarize(transcript);
+    } catch (error) {
+      console.error("Error generating title with Gemini:", error.message);
+    }
+    return `${defaultTitle}: ${summary.substring(0, 50)}... - ${formatDate(new Date())}`;
   } catch (error) {
     console.error("Error generating title with Gemini:", error.message);
 
@@ -51,13 +51,13 @@ function extractKeywords(text) {
 
   // Remove stopwords
   const stopwords = [
-    "der", "die", "das", "und", "in", "zu", "mit", "für", "von", "auf", "ist",
-    "ich", "es", "du", "wir", "sie", "nicht", "ein", "eine", "als", "aber",
-    "oder", "wenn", "dann", "so", "auch", "sich", "um", "wie", "bei", "aus",
-    "dass", "da", "vom", "zum", "zur", "am", "im", "an", "noch", "nur", "sehr",
-    "über", "vor", "nach", "mal", "ja", "wird", "sein", "einen", "keine", "hat",
-    "schon", "bis", "war", "habe", "doch", "können", "mir", "uns", "dem", "den",
-    "einem", "einen", "einer", "eines", "welche", "welcher",
+    "the", "and", "in", "to", "with", "for", "from", "on", "is",
+    "I", "it", "you", "we", "they", "not", "a", "an", "as", "but",
+    "or", "if", "then", "so", "also", "self", "about", "how", "at", "out",
+    "that", "there", "from", "to", "at", "the", "in", "on", "still", "only", "very",
+    "over", "before", "after", "time", "yes", "will", "be", "one", "none", "has",
+    "already", "until", "was", "have", "yet", "can", "me", "us", "the", "the",
+    "one", "one", "one", "one", "which", "which",
   ];
 
   const filteredWords = words.filter(
@@ -84,7 +84,7 @@ function extractKeywords(text) {
  * @returns {string} - Formatted date
  */
 function formatDate(date) {
-  return date.toLocaleDateString("de-DE", {
+  return date.toLocaleDateString("en-US", {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",

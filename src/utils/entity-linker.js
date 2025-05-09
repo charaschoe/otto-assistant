@@ -1,24 +1,24 @@
 /**
- * Dieses Modul identifiziert wichtige Entitäten und Konzepte im Text,
- * um automatische Verlinkungen für Obsidian's Knowledge Graph zu erstellen
+ * This module identifies important entities and concepts in the text,
+ * to create automatic links for Obsidian's Knowledge Graph
  */
 
 /**
- * Erkennt wichtige Entitäten und Konzepte im Text
- * @param {string} text - Der zu analysierende Text
- * @returns {string[]} - Array mit erkannten Entitäten
+ * Identifies important entities and concepts in the text
+ * @param {string} text - The text to analyze
+ * @returns {string[]} - Array with identified entities
  */
 function extractEntities(text) {
-	// Extrahiere Substantive und Eigennamen basierend auf Großschreibung und Kontext
+	 // Extract nouns and proper names based on capitalization and context
 	const potentialEntities = [];
 
-	// Regulärer Ausdruck für Wörter, die mit Großbuchstaben beginnen (potenzielle Eigennamen)
+	 // Regular expression for words starting with uppercase letters (potential proper names)
 	const capitalized = text.match(/\b[A-Z][a-zäöüß]{2,}\b/g) || [];
 
-	// Extrahiere Fachbegriffe basierend auf Kontext
+	 // Extract technical terms based on context
 	const specialized = extractSpecializedTerms(text);
 
-	// Kombiniere alle potenziellen Entitäten und entferne Duplikate
+	 // Combine all potential entities and remove duplicates
 	return [...new Set([...capitalized, ...specialized])];
 }
 

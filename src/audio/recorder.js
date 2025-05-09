@@ -4,19 +4,19 @@ const path = require("path");
 const mic = require("mic");
 
 /**
- * Nimmt Audio für eine bestimmte Zeit auf
- * @param {string} fileName - Der Name der Zieldatei
- * @param {number} duration - Die Aufnahmedauer in Millisekunden
- * @returns {Promise<string>} - Der vollständige Pfad zur gespeicherten Audiodatei
+ * Records audio for a specified duration
+ * @param {string} fileName - The name of the target file
+ * @param {number} duration - The recording duration in milliseconds
+ * @returns {Promise<string>} - The full path to the saved audio file
  */
 function recordAudio(fileName, duration = 25000) {
 	return new Promise((resolve, reject) => {
 		try {
-			// Erstelle den Ausgabepfad
+			    // Create the output path
 			const outputDir = path.join(__dirname, "audio");
 			const outputFile = path.join(outputDir, fileName);
 
-			// Stelle sicher, dass das Ausgabeverzeichnis existiert
+			    // Ensure the output directory exists
 			if (!fs.existsSync(outputDir)) {
 				fs.mkdirSync(outputDir, { recursive: true });
 			}
@@ -26,7 +26,7 @@ function recordAudio(fileName, duration = 25000) {
 				channels: "1",
 				fileType: "wav",
 				encoding: "signed-integer",
-				device: "default", // Hier könnte ein spezifisches Gerät angegeben werden
+				device: "default", // A specific device could be specified here
 			});
 
 			const micInputStream = micInstance.getAudioStream();
@@ -35,34 +35,34 @@ function recordAudio(fileName, duration = 25000) {
 			micInputStream.pipe(outputFileStream);
 
 			micInputStream.on("error", (err) => {
-				console.error("Fehler bei der Aufnahme:", err);
+				console.error("Error during recording:", err);
 				reject(err);
 			});
 
 			micInstance.start();
-			console.log(`Aufnahme gestartet... (${duration / 1000} Sekunden)`);
+			console.log(`Recording started... (${duration / 1000} seconds)`);
 
 			// Beende die Aufnahme nach der angegebenen Dauer
 setTimeout(() => {
-  console.log("Die Aufnahme wird in 5 Sekunden beendet...");
+  console.log("The recording will end in 5 seconds...");
   setTimeout(() => {
     micInstance.stop();
-    console.log("Aufnahme beendet.");
+    console.log("Recording ended.");
 
-    // Warte kurz, um sicherzustellen, dass die Datei vollständig geschrieben ist
+    // Wait briefly to ensure the file is fully written
     setTimeout(() => {
       resolve(outputFile);
     }, 500);
   }, 5000);
 }, duration - 5000);
 		} catch (error) {
-			console.error("Fehler beim Starten der Aufnahme:", error);
+			console.error("Error starting the recording:", error);
 			reject(error);
 		}
 	});
 }
 
-// Alte Funktion für Abwärtskompatibilität
+/** Legacy function for backward compatibility */
 function record(duration, outputFile, callback) {
 	recordAudio(path.basename(outputFile), duration)
 		.then((file) => callback())
