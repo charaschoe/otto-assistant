@@ -41,7 +41,7 @@ def transcribe_audio(audio_file):
             return ""
         
         # Transkribiere die Audiodatei
-        result = model.transcribe(audio_file)
+        result = model.transcribe(audio_file, verbose=True, logprob_threshold=-1.0)
         
         # Ausgabe des Transkripts mit Markern für die Extraktion
         print("📝 TRANSKRIPT_START")

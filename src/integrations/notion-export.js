@@ -194,12 +194,14 @@ async function exportToNotion(content, baseTitle = "Notiz", options = {}) {
 }
 
 /**
- * Erstellt Inhaltsblöcke für Notion basierend auf dem Inhalt und Optionen
+ * Markiert Aufgaben im Text und erstellt Inhaltsblöcke für Notion basierend auf dem Inhalt und Optionen
  * @param {string} content - Der zu strukturierende Inhalt
  * @param {Object} options - Optionen für die Strukturierung
  * @returns {Array} - Array von Notion-Blocks
  */
 function createContentBlocks(content, options = {}) {
+  // Aufgaben im Text erkennen und markieren
+  content = content.replace(/(?:-|\*|\d+\.)\s*(.*?)(?:\n|$)/g, "[] $1");
 	const blocks = [];
 
 	// Füge einen Notiztyp-Block hinzu, falls vorhanden

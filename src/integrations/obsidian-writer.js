@@ -169,17 +169,19 @@ function applyTemplate(templateName, data) {
 }
 
 /**
- * Speichert ein Transkript in Obsidian mit automatischen Verlinkungen
+ * Speichert ein Transkript in Obsidian mit automatischen Verlinkungen und markiert Aufgaben
  * @param {string} transcript - Das zu speichernde Transkript
  * @param {string} summary - Die Zusammenfassung des Transkripts
  * @param {string} baseTitle - Optionaler Basis-Titel
  * @returns {string|null} - Der Titel der erstellten Notiz oder null bei Fehler
  */
 function saveTranscriptToObsidian(
-	transcript,
-	summary,
-	baseTitle = "Transkript"
+transcript,
+summary,
+baseTitle = "Transkript"
 ) {
+  // Aufgaben im Transkript erkennen und markieren
+  transcript = transcript.replace(/(?:-|\*|\d+\.)\s*(.*?)(?:\n|$)/g, "- [ ] $1");
 	try {
 		// Erkenne wichtige Entitäten im Text für Verlinkungen
 		const entities = extractEntities(transcript);
