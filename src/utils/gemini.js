@@ -155,7 +155,7 @@ async function summarize(text, templateType = null) {
     console.error("Fehler bei der Zusammenfassung:", error.message);
 
     // Einfache Zusammenfassung ohne API
-    return `Zusammenfassung (ohne KI): ${text.substring(0, 100)}...`;
+    return `Zusammenfassung (ohne KI): ${text.split(".").slice(0, 2).join(".")}...`;
   }
 }
 

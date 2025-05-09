@@ -30,10 +30,12 @@ const VAULT_PATHS = [
 // Finde den ersten existierenden Vault-Pfad
 let OBSIDIAN_VAULT = null;
 for (const vaultPath of VAULT_PATHS) {
-	if (fs.existsSync(vaultPath)) {
-		OBSIDIAN_VAULT = vaultPath;
-		console.log(`✅ Verwende Obsidian-Vault: ${OBSIDIAN_VAULT}`);
-		break;
+if (fs.existsSync(vaultPath) && fs.accessSync(vaultPath, fs.constants.W_OK)) {
+OBSIDIAN_VAULT = vaultPath;
+console.log(`✅ Verwende Obsidian-Vault: ${OBSIDIAN_VAULT}`);
+break;
+} else {
+console.warn(`⚠️ Vault-Pfad existiert, ist aber nicht beschreibbar: ${vaultPath}`);
 	}
 }
 

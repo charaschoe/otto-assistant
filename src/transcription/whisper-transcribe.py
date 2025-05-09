@@ -27,18 +27,18 @@ def transcribe_audio(audio_file):
         # Überprüfe, ob die Audiodatei existiert und gültig ist
         if not os.path.exists(audio_file):
             print(f"Fehler: Audiodatei nicht gefunden: {audio_file}")
-            return ""
-        
+            sys.exit(2)
+
         if not is_valid_audio_file(audio_file):
             print(f"Fehler: Ungültige Audiodatei: {audio_file}")
-            return ""
+            sys.exit(3)
             
         # Lade das Whisper-Modell (kleineres Modell für schnellere Verarbeitung)
         try:
             model = whisper.load_model("base")
         except Exception as e:
             print(f"Fehler beim Laden des Whisper-Modells: {str(e)}")
-            return ""
+            sys.exit(4)
         
         # Transkribiere die Audiodatei
         result = model.transcribe(audio_file, verbose=True, logprob_threshold=-1.0)

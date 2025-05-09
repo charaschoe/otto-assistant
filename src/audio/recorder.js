@@ -43,19 +43,18 @@ function recordAudio(fileName, duration = 25000) {
 			console.log(`Aufnahme gestartet... (${duration / 1000} Sekunden)`);
 
 			// Beende die Aufnahme nach der angegebenen Dauer
-			setTimeout(() => {
-  console.log("Die Aufnahme wird in 5 Sekunden beendet...");
-}, duration - 5000);
-
 setTimeout(() => {
-				micInstance.stop();
-				console.log("Aufnahme beendet.");
+  console.log("Die Aufnahme wird in 5 Sekunden beendet...");
+  setTimeout(() => {
+    micInstance.stop();
+    console.log("Aufnahme beendet.");
 
-				// Warte kurz, um sicherzustellen, dass die Datei vollständig geschrieben ist
-				setTimeout(() => {
-					resolve(outputFile);
-				}, 500);
-			}, duration);
+    // Warte kurz, um sicherzustellen, dass die Datei vollständig geschrieben ist
+    setTimeout(() => {
+      resolve(outputFile);
+    }, 500);
+  }, 5000);
+}, duration - 5000);
 		} catch (error) {
 			console.error("Fehler beim Starten der Aufnahme:", error);
 			reject(error);

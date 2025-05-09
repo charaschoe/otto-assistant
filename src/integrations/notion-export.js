@@ -82,10 +82,10 @@ async function exportToNotion(content, baseTitle = "Notiz", options = {}) {
 		// Hole die Datenbankeigenschaften
 		const dbProperties = await getNotionDatabaseProperties();
 
-		if (!dbProperties) {
-			console.warn(
-				"⚠️ Konnte Datenbankeigenschaften nicht abrufen, verwende nur Titel-Eigenschaft."
-			);
+if (!dbProperties) {
+console.warn(
+"⚠️ Konnte Datenbankeigenschaften nicht abrufen, überprüfe die Konfiguration oder die Datenbank-ID."
+);
 
 			// Minimal-Version nur mit Name/Titel
 			const response = await notion.pages.create({
@@ -107,6 +107,10 @@ async function exportToNotion(content, baseTitle = "Notiz", options = {}) {
 
 		// Erstelle Eigenschaften basierend auf den tatsächlich verfügbaren Datenbank-Eigenschaften
 		const properties = {};
+if (!dbProperties || Object.keys(dbProperties).length === 0) {
+  console.error("❌ Keine gültigen Datenbankeigenschaften gefunden. Export abgebrochen.");
+  return null;
+}
 
 		// Titel hinzufügen (immer erforderlich)
 		// Finde die Titel-Eigenschaft (normalerweise "Name", "Titel", "Title" usw.)

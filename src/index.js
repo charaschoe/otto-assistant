@@ -1,4 +1,17 @@
 // index.js
+const fs = require("fs");
+let config;
+try {
+  const configPath = path.resolve(__dirname, "../config.json");
+  config = JSON.parse(fs.readFileSync(configPath, "utf8"));
+} catch (error) {
+  console.warn("⚠️ config.json nicht gefunden oder ungültig. Standardwerte werden verwendet.");
+  config = {
+    GEMINI_API_KEY: "default-key",
+    NOTION_API_KEY: "default-key",
+    NOTION_DATABASE_ID: "default-id",
+  };
+}
 const { recordAudio } = require("./audio/recorder");
 const {
 	saveTranscriptToObsidian,
