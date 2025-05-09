@@ -6,7 +6,7 @@ const { summarize } = require("./gemini");
  * @param {string} defaultTitle - The default title if no keywords are found
  * @returns {Promise<string>} - The generated title
  */
-async function generateTitle(transcript, defaultTitle = "Notiz") {
+function generateTitle(transcript, defaultTitle = "Notiz") {
   // If no transcript is available, use default title with date
   if (!transcript || transcript.trim() === "") {
     return `${defaultTitle} ${new Date().toLocaleString("de-DE")}`;
@@ -14,8 +14,13 @@ async function generateTitle(transcript, defaultTitle = "Notiz") {
 
   try {
     // Use Google Gemini to summarize the transcript
-    const summary = await summarize(transcript);
-    return `${defaultTitle}: ${summary.substring(0, 50)}... - ${formatDate(new Date())}`;
+  let summary = "";
+  try {
+    summary = summarize(transcript);
+  } catch (error) {
+    console.error("Error generating title with Gemini:", error.message);
+  }
+  return `${defaultTitle}: ${summary.substring(0, 50)}... - ${formatDate(new Date())}`;
   } catch (error) {
     console.error("Error generating title with Gemini:", error.message);
 
