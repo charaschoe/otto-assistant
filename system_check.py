@@ -16,13 +16,13 @@ def main():
         import whisper
         print("✅ whisper Modul ist verfügbar")
     except ImportError:
-        print("❌ whisper Modul ist nicht installiert")
+        print("❌ whisper Modul ist nicht installiert. Bitte installieren Sie es mit 'pip install openai-whisper'")
     
     try:
         import mimetypes
         print("✅ mimetypes Modul ist verfügbar")
     except ImportError:
-        print("❌ mimetypes Modul ist nicht installiert")
+        print("❌ mimetypes Modul ist nicht installiert. Dieses Modul sollte standardmäßig verfügbar sein.")
     
     # Pfadstruktur prüfen
     scan_paths = [
@@ -35,7 +35,7 @@ def main():
         if os.path.exists(path):
             print(f"✅ {path} existiert")
         else:
-            print(f"❌ {path} existiert nicht")
+            print(f"❌ {path} existiert nicht. Bitte erstellen Sie den Pfad oder überprüfen Sie die Konfiguration.")
     
     print("\nBefehle zum Ausführen:")
     print("- python3 src/transcription/whisper-transcribe.py [audiodatei]")

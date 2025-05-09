@@ -3,6 +3,11 @@ const fs = require("fs");
 const path = require("path");
 const { Client } = require("@notionhq/client");
 const { generateTitle } = require("../utils/title-generator");
+const {
+	extractEntities,
+	identifyEntitiesWithEmojis,
+	detectLanguage,
+} = require("../utils/entity-linker");
 
 // Lade die Konfiguration aus der config.json im Root-Verzeichnis
 let config;
@@ -65,38 +70,69 @@ async function exportToNotion(content, baseTitle = "Notiz", options = {}) {
 			return null;
 		}
 
+		// Erkenne Sprache des Textes
+		const language = detectLanguage(content);
+		console.log(
+			`🌐 Erkannte Sprache: ${language === "de" ? "Deutsch" : "Englisch"}`
+		);
+
+		// Passe den Basis-Titel an die erkannte Sprache an
+		if (!options.baseTitle) {
+			baseTitle = language === "de" ? "Notiz" : "Note";
+		}
+
 		// Generiere einen dynamischen Titel
 		const title = generateTitle(content, baseTitle);
+
+		// Identifiziere Entitäten und zugehörige Emojis
+		const entityEmojis = identifyEntitiesWithEmojis(content);
+		const entities = Object.keys(entityEmojis);
+
+		// Wähle ein Emoji für die Notiz basierend auf den Entitäten
+		const noteEmoji = Object.values(entityEmojis)[0] || "📝";
 
 		// Standardoptionen
 		const defaultOptions = {
 			templateType: null,
 			tags: [],
-			status: "Neu",
-			priority: "Medium",
+			status: language === "de" ? "Neu" : "New",
+			priority: language === "de" ? "Mittel" : "Medium",
+			emoji: noteEmoji,
+			language: language === "de" ? "Deutsch" : "English",
 		};
 
 		// Kombiniere Standardoptionen mit übergebenen Optionen
 		const finalOptions = { ...defaultOptions, ...options };
 
+		// Extrahiere Tags aus den Entitäten, wenn keine Tags übergeben wurden
+		if (!options.tags || options.tags.length === 0) {
+			finalOptions.tags = entities.slice(0, 5); // Begrenze auf 5 Tags
+		}
+
 		// Hole die Datenbankeigenschaften
 		const dbProperties = await getNotionDatabaseProperties();
 
-if (!dbProperties) {
-console.warn(
-"⚠️ Konnte Datenbankeigenschaften nicht abrufen, überprüfe die Konfiguration oder die Datenbank-ID."
-);
+		if (!dbProperties) {
+			console.warn(
+				"⚠️ Konnte Datenbankeigenschaften nicht abrufen, überprüfe die Konfiguration oder die Datenbank-ID."
+			);
 
-			// Minimal-Version nur mit Name/Titel
+			// Minimal-Version mit Name/Titel und Emoji/Sprache
+			const titleWithEmoji = `${finalOptions.emoji} ${title}`;
+			finalOptions.entityEmojis = entityEmojis; // Emojis für Entitäten hinzufügen
+
 			const response = await notion.pages.create({
 				parent: { database_id: databaseId },
 				properties: {
 					// Die einzige universelle Eigenschaft ist "title", die in allen Datenbanken verfügbar ist
 					Name: {
-						title: [{ text: { content: title } }],
+						title: [{ text: { content: titleWithEmoji } }],
 					},
 				},
-				children: createContentBlocks(content, {}),
+				children: createContentBlocks(content, finalOptions),
+				icon: {
+					emoji: finalOptions.emoji,
+				},
 			});
 
 			console.log(
@@ -107,23 +143,27 @@ console.warn(
 
 		// Erstelle Eigenschaften basierend auf den tatsächlich verfügbaren Datenbank-Eigenschaften
 		const properties = {};
-if (!dbProperties || Object.keys(dbProperties).length === 0) {
-  console.error("❌ Keine gültigen Datenbankeigenschaften gefunden. Export abgebrochen.");
-  return null;
-}
+		if (!dbProperties || Object.keys(dbProperties).length === 0) {
+			console.error(
+				"❌ Keine gültigen Datenbankeigenschaften gefunden. Export abgebrochen."
+			);
+			return null;
+		}
 
-		// Titel hinzufügen (immer erforderlich)
+		// Titel mit Emoji hinzufügen (immer erforderlich)
 		// Finde die Titel-Eigenschaft (normalerweise "Name", "Titel", "Title" usw.)
 		const titleProperty = findTitleProperty(dbProperties);
+		const titleWithEmoji = `${finalOptions.emoji} ${title}`;
+
 		if (titleProperty) {
 			properties[titleProperty] = {
-				title: [{ text: { content: title } }],
+				title: [{ text: { content: titleWithEmoji } }],
 			};
 		} else {
 			// Fallback: Versuche "Name" oder die erste Eigenschaft
 			const firstProperty = Object.keys(dbProperties)[0];
 			properties[firstProperty || "Name"] = {
-				title: [{ text: { content: title } }],
+				title: [{ text: { content: titleWithEmoji } }],
 			};
 		}
 
@@ -182,11 +222,17 @@ if (!dbProperties || Object.keys(dbProperties).length === 0) {
 			};
 		}
 
+		// Füge entityEmojis zu den Optionen hinzu
+		finalOptions.entityEmojis = entityEmojis;
+
 		// Erstelle die Seite in Notion
 		const response = await notion.pages.create({
 			parent: { database_id: databaseId },
 			properties,
 			children: createContentBlocks(content, finalOptions),
+			icon: {
+				emoji: finalOptions.emoji,
+			},
 		});
 
 		console.log(`✅ Inhalt zu Notion exportiert: ${response.url}`);
@@ -204,8 +250,8 @@ if (!dbProperties || Object.keys(dbProperties).length === 0) {
  * @returns {Array} - Array von Notion-Blocks
  */
 function createContentBlocks(content, options = {}) {
-  // Aufgaben im Text erkennen und markieren
-  content = content.replace(/(?:-|\*|\d+\.)\s*(.*?)(?:\n|$)/g, "[] $1");
+	// Aufgaben im Text erkennen und markieren
+	content = content.replace(/(?:-|\*|\d+\.)\s*(.*?)(?:\n|$)/g, "[] $1");
 	const blocks = [];
 
 	// Füge einen Notiztyp-Block hinzu, falls vorhanden
@@ -216,17 +262,22 @@ function createContentBlocks(content, options = {}) {
 				rich_text: [
 					{ text: { content: `Typ: ${options.templateType}` } },
 				],
-				icon: { emoji: "📝" },
+				icon: { emoji: options.emoji || "📝" },
 				color: "blue_background",
 			},
 		});
 	}
 
-	// Füge Überschrift hinzu
+	// Bestimme Überschrift basierend auf Sprache
+	const contentHeading =
+		options.language && options.language === "English"
+			? "Content"
+			: "Inhalt";
+
 	blocks.push({
 		object: "block",
 		heading_1: {
-			rich_text: [{ text: { content: "Inhalt" } }],
+			rich_text: [{ text: { content: contentHeading } }],
 		},
 	});
 
@@ -249,20 +300,56 @@ function createContentBlocks(content, options = {}) {
 		divider: {},
 	});
 
+	// Lokalisierte Datumsformatierung und Sprachhinweis
+	const dateLabel =
+		options.language && options.language === "English"
+			? "Created on"
+			: "Erstellt am";
+	const languageEmoji =
+		options.language && options.language === "English" ? "🇬🇧" : "🇩🇪";
+	const locale =
+		options.language && options.language === "English" ? "en-US" : "de-DE";
+
 	blocks.push({
 		object: "block",
 		paragraph: {
 			rich_text: [
 				{
 					text: {
-						content: `Erstellt am: ${new Date().toLocaleString(
-							"de-DE"
-						)}`,
+						content: `${languageEmoji} ${
+							options.language || "Deutsch"
+						} | ${dateLabel}: ${new Date().toLocaleString(locale)}`,
 					},
 				},
 			],
 		},
 	});
+
+	// Füge Entitäten mit Emojis hinzu, wenn vorhanden
+	if (options.entityEmojis && Object.keys(options.entityEmojis).length > 0) {
+		// Überschrift für Entitäten
+		const conceptsHeading =
+			options.language && options.language === "English"
+				? "Important Concepts"
+				: "Wichtige Konzepte";
+
+		blocks.push({
+			object: "block",
+			heading_2: {
+				rich_text: [{ text: { content: conceptsHeading } }],
+			},
+		});
+
+		// Bullet-Liste mit Entitäten und Emojis
+		Object.entries(options.entityEmojis).forEach(([entity, emoji]) => {
+			blocks.push({
+				object: "block",
+				bulleted_list_item: {
+					rich_text: [{ text: { content: `${emoji} ${entity}` } }],
+				},
+			});
+		});
+	}
 
 	return blocks;
 }

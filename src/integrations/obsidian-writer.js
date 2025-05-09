@@ -30,12 +30,17 @@ const VAULT_PATHS = [
 // Finde den ersten existierenden Vault-Pfad
 let OBSIDIAN_VAULT = null;
 for (const vaultPath of VAULT_PATHS) {
-if (fs.existsSync(vaultPath) && fs.accessSync(vaultPath, fs.constants.W_OK)) {
-OBSIDIAN_VAULT = vaultPath;
-console.log(`✅ Verwende Obsidian-Vault: ${OBSIDIAN_VAULT}`);
-break;
-} else {
-console.warn(`⚠️ Vault-Pfad existiert, ist aber nicht beschreibbar: ${vaultPath}`);
+	if (
+		fs.existsSync(vaultPath) &&
+		fs.accessSync(vaultPath, fs.constants.W_OK)
+	) {
+		OBSIDIAN_VAULT = vaultPath;
+		console.log(`✅ Verwende Obsidian-Vault: ${OBSIDIAN_VAULT}`);
+		break;
+	} else {
+		console.warn(
+			`⚠️ Vault-Pfad existiert, ist aber nicht beschreibbar: ${vaultPath}`
+		);
 	}
 }
 
@@ -66,29 +71,33 @@ const OBSIDIAN_TEMPLATES = {
 {{transcript}}
 
 {{#if entities.length}}
-## Verknüpfte Konzepte
-{{#each entities}}
-- [[{{this}}]]
+## Wichtige Konzepte
+{{#each entityEmojis}}
+- {{value}} [[{{@key}}]]
 {{/each}}
 {{/if}}
 
 ---
 Erstellt: {{created_at}}
+Sprache: {{language}}
+Tags: #transkript #otto
 `,
 	summary: `# Zusammenfassung: {{title}}
 
 {{summary}}
 
 {{#if entities.length}}
-## Verknüpfte Konzepte
-{{#each entities}}
-- [[{{this}}]]
+## Wichtige Konzepte
+{{#each entityEmojis}}
+- {{value}} [[{{@key}}]]
 {{/each}}
 {{/if}}
 
 ---
 Erstellt: {{created_at}}
-Basierend auf: {{original_title}}
+Basierend auf: [[{{original_title}}]]
+Sprache: {{language}}
+Tags: #zusammenfassung #otto
 `,
 };
 
@@ -178,18 +187,39 @@ function applyTemplate(templateName, data) {
  * @returns {string|null} - Der Titel der erstellten Notiz oder null bei Fehler
  */
 function saveTranscriptToObsidian(
-transcript,
-summary,
-baseTitle = "Transkript"
+	transcript,
+	summary,
+	baseTitle = "Transkript"
 ) {
-  // Aufgaben im Transkript erkennen und markieren
-  transcript = transcript.replace(/(?:-|\*|\d+\.)\s*(.*?)(?:\n|$)/g, "- [ ] $1");
+	// Aufgaben im Transkript erkennen und markieren
+	transcript = transcript.replace(
+		/(?:-|\*|\d+\.)\s*(.*?)(?:\n|$)/g,
+		"- [ ] $1"
+	);
 	try {
+		// Erkenne Sprache des Textes
+		const language = detectLanguage(transcript);
+		console.log(
+			`🌐 Erkannte Sprache: ${language === "de" ? "Deutsch" : "Englisch"}`
+		);
+
 		// Erkenne wichtige Entitäten im Text für Verlinkungen
 		const entities = extractEntities(transcript);
 		console.log(
 			`🔍 Erkannte Entitäten: ${
 				entities.length > 0 ? entities.join(", ") : "keine"
+			}`
+		);
+
+		// Identifiziere Entitäten mit passenden Emojis
+		const entityEmojis = identifyEntitiesWithEmojis(transcript);
+		console.log(
+			`🎯 Entitäten mit Emojis: ${
+				Object.keys(entityEmojis).length > 0
+					? Object.entries(entityEmojis)
+							.map(([entity, emoji]) => `${emoji} ${entity}`)
+							.join(", ")
+					: "keine"
 			}`
 		);
 
@@ -205,16 +235,24 @@ baseTitle = "Transkript"
 		// Generiere einen dynamischen Titel
 		const title = generateTitle(transcript, baseTitle);
 
+		// Wähle ein allgemeines Emoji für die Notiz basierend auf Inhalt
+		const noteEmoji = Object.values(entityEmojis)[0] || "📝";
+		const titleWithEmoji = `${noteEmoji} ${title}`;
+
 		// Erstelle Dateinamen (ersetze ungültige Zeichen)
-		const fileName = `${title.replace(/[/\\?%*:|"<>]/g, "-")}.md`;
+		const fileName = `${titleWithEmoji.replace(/[/\\?%*:|"<>]/g, "-")}.md`;
 
 		// Bereite Daten für die Vorlage vor
 		const templateData = {
-			title,
+			title: titleWithEmoji,
 			transcript: linkedTranscript,
 			summary: linkedSummary || "Keine Zusammenfassung verfügbar.",
-			created_at: new Date().toLocaleString("de-DE"),
+			created_at: new Date().toLocaleString(
+				language === "de" ? "de-DE" : "en-US"
+			),
 			entities: entities,
+			entityEmojis: entityEmojis,
+			language: language === "de" ? "Deutsch" : "Englisch",
 		};
 
 		// Wende die Vorlage an
@@ -241,19 +279,37 @@ baseTitle = "Transkript"
  */
 function saveSummaryToObsidian(summary, originalTitle) {
 	try {
+		// Erkenne Sprache des Textes
+		const language = detectLanguage(summary);
+
 		// Generiere einen dynamischen Titel
-		const title = generateTitle(summary, "Zusammenfassung");
+		const title = generateTitle(
+			summary,
+			language === "de" ? "Zusammenfassung" : "Summary"
+		);
+
+		// Identifiziere Entitäten und Emojis
+		const entities = extractEntities(summary);
+		const entityEmojis = identifyEntitiesWithEmojis(summary);
+
+		// Wähle ein allgemeines Emoji für die Notiz basierend auf Inhalt
+		const noteEmoji = Object.values(entityEmojis)[0] || "📋";
+		const titleWithEmoji = `${noteEmoji} ${title}`;
 
 		// Erstelle Dateinamen (ersetze ungültige Zeichen)
-		const fileName = `${title.replace(/[/\\?%*:|"<>]/g, "-")}.md`;
+		const fileName = `${titleWithEmoji.replace(/[/\\?%*:|"<>]/g, "-")}.md`;
 
 		// Bereite Daten für die Vorlage vor
 		const templateData = {
-			title,
+			title: titleWithEmoji,
 			summary,
 			original_title: originalTitle || "Unbekanntes Transkript",
-			created_at: new Date().toLocaleString("de-DE"),
-			entities: extractEntities(summary),
+			created_at: new Date().toLocaleString(
+				language === "de" ? "de-DE" : "en-US"
+			),
+			entities: entities,
+			entityEmojis: entityEmojis,
+			language: language === "de" ? "Deutsch" : "Englisch",
 		};
 
 		// Wende die Vorlage an
@@ -287,23 +343,44 @@ function createEntityNotes(entities, sourceTitle, sourceContent) {
 		fs.mkdirSync(entitiesDir, { recursive: true });
 	}
 
+	// Identifiziere Beziehungen zwischen den Entitäten
+	const relations = identifyRelatedTerms(sourceContent, entities);
+
 	for (const entity of entities) {
 		const entityFile = path.join(entitiesDir, `${entity}.md`);
 
 		try {
 			let entityContent = "";
+			let existingContent = "";
+			let isNewEntity = false;
 
 			// Prüfe, ob die Datei bereits existiert
 			if (fs.existsSync(entityFile)) {
 				// Lese vorhandenen Inhalt
-				entityContent = fs.readFileSync(entityFile, "utf8");
+				existingContent = fs.readFileSync(entityFile, "utf8");
+				entityContent = existingContent;
 
 				// Füge Backlink zur Quelldatei hinzu, wenn er noch nicht existiert
 				if (!entityContent.includes(`[[${sourceTitle}]]`)) {
-					entityContent += `\n- Erwähnt in: [[${sourceTitle}]]\n`;
+					// Finde den Abschnitt "Erwähnungen" oder füge ihn am Ende hinzu
+					const mentionsSection =
+						entityContent.match(/## Erwähnungen\n\n/);
+					if (mentionsSection) {
+						const position =
+							entityContent.indexOf(mentionsSection[0]) +
+							mentionsSection[0].length;
+						entityContent =
+							entityContent.substring(0, position) +
+							`- Erwähnt in: [[${sourceTitle}]]\n` +
+							entityContent.substring(position);
+					} else {
+						entityContent += `\n## Erwähnungen\n\n`;
+						entityContent += `- Erwähnt in: [[${sourceTitle}]]\n`;
+					}
 				}
 			} else {
 				// Erstelle eine neue Entitätsnotiz
+				isNewEntity = true;
 				entityContent = `# ${entity}\n\n`;
 
 				// Extrahiere Kontext für diese Entität
@@ -319,8 +396,80 @@ function createEntityNotes(entities, sourceTitle, sourceContent) {
 					}
 				}
 
+				// Füge Beziehungsinformationen hinzu
+				if (relations[entity] && relations[entity].related.length > 0) {
+					entityContent += "## Verbunden mit\n\n";
+					for (const related of relations[entity].related) {
+						// Zeige auch die Stärke der Beziehung an
+						const weight =
+							relations[entity].relatedWeighted[related] || 1;
+						const strengthMarker = weight > 1 ? "**" : ""; // Starke Verbindungen markieren
+						entityContent += `- ${strengthMarker}[[${related}]]${strengthMarker}\n`;
+					}
+					entityContent += "\n";
+				}
+
 				entityContent += "## Erwähnungen\n\n";
 				entityContent += `- Erstmals erwähnt in: [[${sourceTitle}]]\n`;
+			}
+
+			// Bei bestehenden Entitäten, aktualisiere Beziehungen wenn sie sich geändert haben
+			if (
+				!isNewEntity &&
+				relations[entity] &&
+				relations[entity].related.length > 0
+			) {
+				// Prüfe, ob bereits ein Beziehungsabschnitt existiert
+				let connectionSection = entityContent.match(
+					/## Verbunden mit\n\n([^#]*)/
+				);
+
+				// Erstelle neue Beziehungsliste
+				let newConnectionsContent = "## Verbunden mit\n\n";
+				for (const related of relations[entity].related) {
+					const weight =
+						relations[entity].relatedWeighted[related] || 1;
+					const strengthMarker = weight > 1 ? "**" : "";
+					newConnectionsContent += `- ${strengthMarker}[[${related}]]${strengthMarker}\n`;
+				}
+				newConnectionsContent += "\n";
+
+				if (connectionSection) {
+					// Ersetze bestehenden Abschnitt
+					entityContent = entityContent.replace(
+						/## Verbunden mit\n\n([^#]*)/,
+						newConnectionsContent
+					);
+				} else {
+					// Füge nach Kontext oder vor Erwähnungen ein
+					const contextSection = entityContent.match(
+						/## Kontext\n\n([^#]*)/
+					);
+					const mentionSection =
+						entityContent.match(/## Erwähnungen\n\n/);
+
+					if (contextSection) {
+						const position =
+							entityContent.indexOf(contextSection[0]) +
+							contextSection[0].length +
+							contextSection[1].length;
+						entityContent =
+							entityContent.substring(0, position) +
+							newConnectionsContent +
+							entityContent.substring(position);
+					} else if (mentionSection) {
+						const position = entityContent.indexOf(
+							mentionSection[0]
+						);
+						entityContent =
+							entityContent.substring(0, position) +
+							newConnectionsContent +
+							entityContent.substring(position);
+					} else {
+						// Füge am Ende hinzu
+						entityContent += "\n" + newConnectionsContent;
+					}
+				}
 			}
 
 			// Speichere die Entitätsnotiz

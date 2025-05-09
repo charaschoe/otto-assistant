@@ -25,7 +25,7 @@ def scan_file_for_vulnerabilities(file_path):
         
         for imp in dangerous_imports:
             if imp in content:
-                vulnerabilities.append(f"Potenziell gefährlicher Import/Funktion gefunden: {imp}")
+                vulnerabilities.append(f"Potenziell gefährlicher Import/Funktion gefunden: {imp}. Bitte prüfen und ersetzen Sie es durch eine sicherere Alternative.")
         
         # 2. Suche nach harten Codierungen von Secrets
         secret_patterns = [
@@ -42,11 +42,11 @@ def scan_file_for_vulnerabilities(file_path):
         
         # 3. Suche nach SQL-Injection
         if 'execute(' in content and '%' in content:
-            vulnerabilities.append("Mögliche SQL-Injection gefunden (String-Formatierung bei SQL-Anfragen)")
+            vulnerabilities.append("Mögliche SQL-Injection gefunden (String-Formatierung bei SQL-Anfragen). Verwenden Sie stattdessen parametrisierte Abfragen.")
         
         # 4. Suche nach unsicherer Pfadverarbeitung
         if '../' in content or '..' + os.sep in content:
-            vulnerabilities.append("Mögliche unsichere Pfadverarbeitung gefunden (Directory Traversal)")
+            vulnerabilities.append("Mögliche unsichere Pfadverarbeitung gefunden (Directory Traversal). Validieren Sie die Eingaben und verwenden Sie sichere Pfadoperationen.")
         
         # 5. Prüfe auf fehlendes Exception-Handling
         if 'try:' not in content and ('open(' in content or 'import' in content):
