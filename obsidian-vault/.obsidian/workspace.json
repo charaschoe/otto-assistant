@@ -11,10 +11,14 @@
             "id": "0ae7e831527b821d",
             "type": "leaf",
             "state": {
-              "type": "graph",
-              "state": {},
-              "icon": "lucide-git-fork",
-              "title": "Graph view"
+              "type": "markdown",
+              "state": {
+                "file": "Otto- einfach, 2000, test - 09.05.2025, 20-08- einfach, 2000, test - 09.05.2025, 20-08.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "Otto- einfach, 2000, test - 09.05.2025, 20-08- einfach, 2000, test - 09.05.2025, 20-08"
             }
           }
         ]
@@ -90,6 +94,7 @@
             "state": {
               "type": "backlink",
               "state": {
+                "file": "Otto- einfach, 2000, test - 09.05.2025, 20-08- einfach, 2000, test - 09.05.2025, 20-08.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -99,7 +104,7 @@
                 "unlinkedCollapsed": true
               },
               "icon": "links-coming-in",
-              "title": "Backlinks"
+              "title": "Backlinks for Otto- einfach, 2000, test - 09.05.2025, 20-08- einfach, 2000, test - 09.05.2025, 20-08"
             }
           },
           {
@@ -108,11 +113,12 @@
             "state": {
               "type": "outgoing-link",
               "state": {
+                "file": "Otto- einfach, 2000, test - 09.05.2025, 20-08- einfach, 2000, test - 09.05.2025, 20-08.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
               "icon": "links-going-out",
-              "title": "Outgoing links"
+              "title": "Outgoing links from Otto- einfach, 2000, test - 09.05.2025, 20-08- einfach, 2000, test - 09.05.2025, 20-08"
             }
           },
           {
@@ -136,12 +142,13 @@
             "state": {
               "type": "outline",
               "state": {
+                "file": "Otto- einfach, 2000, test - 09.05.2025, 20-08- einfach, 2000, test - 09.05.2025, 20-08.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Outline"
+              "title": "Outline of Otto- einfach, 2000, test - 09.05.2025, 20-08- einfach, 2000, test - 09.05.2025, 20-08"
             }
           }
         ]
