@@ -2,19 +2,19 @@
 const fs = require("fs");
 let config;
 try {
-  const configPath = path.resolve(__dirname, "../config.json");
-  if (fs.existsSync(configPath)) {
-    config = JSON.parse(fs.readFileSync(configPath, "utf8"));
-  } else {
-    throw new Error("config.json not found");
-  }
+	const configPath = path.resolve(__dirname, "../config.json");
+	if (fs.existsSync(configPath)) {
+		config = JSON.parse(fs.readFileSync(configPath, "utf8"));
+	} else {
+		throw new Error("config.json not found");
+	}
 } catch (error) {
-  console.warn("⚠️ config.json not found or invalid. Using default values.");
-  config = {
-    GEMINI_API_KEY: "default-key",
-    NOTION_API_KEY: "default-key",
-    NOTION_DATABASE_ID: "default-id",
-  };
+	console.warn("⚠️ config.json not found or invalid. Using default values.");
+	config = {
+		GEMINI_API_KEY: "default-key",
+		NOTION_API_KEY: "default-key",
+		NOTION_DATABASE_ID: "default-id",
+	};
 }
 const { recordAudio } = require("./audio/recorder");
 const {
@@ -23,6 +23,7 @@ const {
 } = require("./integrations/obsidian-writer");
 const { summarize, detectTemplateType } = require("./utils/gemini");
 const { exportToNotion } = require("./integrations/notion-export");
+const { exportToMiro } = require("./integrations/miro-export");
 const { spawn } = require("child_process");
 const path = require("path");
 const { generateTitle } = require("./utils/title-generator");
@@ -30,62 +31,76 @@ const { generateTitle } = require("./utils/title-generator");
 const readline = require("readline");
 
 const rl = readline.createInterface({
-  input: process.stdin,
-  output: process.stdout,
+	input: process.stdin,
+	output: process.stdout,
 });
 
 rl.question("Enter 'start' to begin recording: ", async (answer) => {
-  if (answer.trim().toLowerCase() === "start") {
-    console.log("🎙️ Starting recording (25 seconds)...");
-    const file = await recordAudio("test.wav", 25000);
-    console.log("✅ Recording saved:", file);
+	if (answer.trim().toLowerCase() === "start") {
+		console.log("🎙️ Starting recording (25 seconds)...");
+		const file = await recordAudio("test.wav", 25000);
+		console.log("✅ Recording saved:", file);
 
-	const transcript = await transcribeAudio(file);
+		const transcript = await transcribeAudio(file);
 
-	if (transcript.trim()) {
-		// Erkenne den Vorlagentyp basierend auf dem Transkript
-		const templateType = detectTemplateType(transcript.trim());
-		console.log(`🔍 Erkannter Inhalt-Typ: ${templateType}`);
+		if (transcript.trim()) {
+			// Erkenne den Vorlagentyp basierend auf dem Transkript
+			const templateType = detectTemplateType(transcript.trim());
+			console.log(`🔍 Erkannter Inhalt-Typ: ${templateType}`);
 
-		// Erstelle dynamischen Titel
-		const title = generateTitle(transcript.trim(), "Otto");
-		console.log(`📝 Generierter Titel: ${title}`);
+			// Erstelle dynamischen Titel
+			const title = generateTitle(transcript.trim(), "Otto");
+			console.log(`📝 Generierter Titel: ${title}`);
 
-		// Erstelle Zusammenfassung mit passendem Template
-		console.log(
-			`🤖 Erstelle Zusammenfassung mit ${templateType}-Vorlage...`
-		);
-		const summary = await summarize(transcript.trim(), templateType);
+			// Erstelle Zusammenfassung mit passendem Template
+			console.log(
+				`🤖 Erstelle Zusammenfassung mit ${templateType}-Vorlage...`
+			);
+			const summary = await summarize(transcript.trim(), templateType);
 
-		// Speichere Transkript in Obsidian
-		console.log(`📔 Speichere in Obsidian...`);
-		const savedTitle = saveTranscriptToObsidian(
-			transcript.trim(),
-			summary,
-			title
-		);
+			// Speichere Transkript in Obsidian
+			console.log(`📔 Speichere in Obsidian...`);
+			const savedTitle = saveTranscriptToObsidian(
+				transcript.trim(),
+				summary,
+				title
+			);
 
-		// Speichere separate Zusammenfassung in Obsidian (optional)
-		// saveSummaryToObsidian(summary, savedTitle);
+			// Speichere separate Zusammenfassung in Obsidian (optional)
+			// saveSummaryToObsidian(summary, savedTitle);
 
-		// Exportiere zu Notion mit Kontext-Informationen
-		console.log(`📘 Exportiere zu Notion...`);
-		await exportToNotion(summary, title, {
-			templateType: templateType,
-			tags: [templateType, "Otto-Assistant"],
-			status: "Neu",
-			priority: templateType === "meeting" ? "Hoch" : "Medium",
-		});
+			// Exportiere zu Notion mit Kontext-Informationen
+			console.log(`📘 Exportiere zu Notion...`);
+			await exportToNotion(summary, title, {
+				templateType: templateType,
+				tags: [templateType, "Otto-Assistant"],
+				status: "Neu",
+				priority: templateType === "meeting" ? "Hoch" : "Medium",
+			});
 
-		console.log("✨ Verarbeitung abgeschlossen!");
+			// Exportiere zu Miro (automatisch, wie Notion/Obsidian)
+			if (config.MIRO_API_KEY) {
+				console.log("🟦 Exportiere als Miro-Board...");
+				const miroUrl = await exportToMiro(transcript.trim(), summary, {
+					apiKey: config.MIRO_API_KEY,
+					teamId: config.MIRO_TEAM_ID, // optional, falls vorhanden
+				});
+				if (miroUrl) {
+					console.log(`✅ Miro-Board erstellt: ${miroUrl}`);
+				} else {
+					console.log("⚠️ Miro-Export fehlgeschlagen.");
+				}
+			}
+
+			console.log("✨ Verarbeitung abgeschlossen!");
+		} else {
+			console.log("⚠️ No transcript found.");
+		}
+		rl.close();
 	} else {
-		console.log("⚠️ No transcript found.");
+		console.log("Invalid input. Please enter 'start'.");
+		rl.close();
 	}
-    rl.close();
-  } else {
-    console.log("Invalid input. Please enter 'start'.");
-    rl.close();
-  }
 });
 
 function transcribeAudio(audioFile) {

@@ -7,6 +7,7 @@ const {
 	extractEntities,
 	addObsidianLinks,
 	identifyRelatedTerms,
+	detectLanguage, // <--- hinzugefügt
 } = require("../utils/entity-linker");
 
 // Konfigurationsvariablen für Obsidian - angepasster Pfad

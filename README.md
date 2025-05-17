@@ -110,6 +110,26 @@ Otto erstellt automatisch ein Netzwerk verknüpfter Informationen:
 -   **Eigenschaftsverwaltung** 🏷️: Automatische Zuweisung von Tags, Status und Priorität.
 -   **Emoji-Unterstützung** 🎯: Integration von passenden Emojis für bessere Visualisierung.
 
+#### Miro-Integration 🟦
+
+-   **Visualisierung als Miro-Board**: Exportiert automatisch die wichtigsten Informationen als Miro-Board.
+-   **Was wird exportiert?**
+    -   **Wichtige Entitäten/Konzepte**: Jede Entität wird als Sticky Note mit passendem Emoji dargestellt.
+    -   **Beziehungen**: Beziehungen zwischen Entitäten werden als Linien/Verbindungen visualisiert.
+    -   **Zusammenfassung**: Die Zusammenfassung erscheint als zentrale Sticky Note.
+    -   **Aufgaben/ToDos**: Erkannte Aufgaben werden als eigene Sticky Notes hinzugefügt.
+-   **Nicht exportiert:** Das komplette Transkript (nur die wichtigsten Strukturen und Aufgaben werden visualisiert).
+-   **Nahtlose Integration**: Der Export kann direkt nach der Analyse erfolgen – das Board ist sofort im Miro-Account verfügbar.
+
+#### Beispiel für den Export:
+
+-   Entitäten: "Projekt", "KI", "Marketing"
+-   Beziehungen: "Projekt" ↔ "KI", "KI" ↔ "Marketing"
+-   Zusammenfassung: "Das Projekt nutzt KI für Marketing."
+-   Aufgaben: "Daten sammeln", "Modell trainieren"
+
+Das Board zeigt alle Entitäten als Sticky Notes, verbindet sie entsprechend und hebt die Zusammenfassung sowie Aufgaben hervor.
+
 ### Benutzerfreundlichkeit
 
 -   **Benachrichtigungen** 🔔: Hinweise 5 Sekunden vor Ende der Aufnahme.
@@ -140,6 +160,42 @@ Um die Notion-Integration zu nutzen, müssen Sie Ihre Notion API-Schlüssel und 
 	"NOTION_DATABASE_ID": "your-notion-database-id"
 }
 ```
+
+### Miro-Integration
+
+Um die Miro-Integration zu nutzen, benötigen Sie einen Miro API-Key (OAuth2 oder persönlicher Token) und eine Team-ID. Diese können Sie als Umgebungsvariablen setzen oder beim Export übergeben:
+
+```json
+{
+	"GEMINI_API_KEY": "your-gemini-api-key",
+	"NOTION_API_KEY": "your-notion-api-key",
+	"NOTION_DATABASE_ID": "your-notion-database-id",
+	"MIRO_API_KEY": "your-miro-api-key",
+	"MIRO_TEAM_ID": "your-miro-team-id"
+}
+```
+
+### Miro-Integration konfigurieren
+
+Füge in deiner `config.json` folgende Felder hinzu:
+
+```json
+{
+	"MIRO_CLIENT_ID": "deine-client-id",
+	"MIRO_CLIENT_SECRET": "dein-client-secret"
+}
+```
+
+Optional kannst du auch einen API-Key und Team-ID verwenden, falls du diese direkt von Miro hast:
+
+```json
+{
+	"MIRO_API_KEY": "dein-miro-api-key",
+	"MIRO_TEAM_ID": "dein-miro-team-id"
+}
+```
+
+Die Integration nutzt automatisch die Werte aus der Konfiguration.
 
 ### Mehrsprachige Unterstützung
 
