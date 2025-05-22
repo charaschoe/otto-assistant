@@ -1,24 +1,20 @@
-// gemini.js
+// kitegg-service.js (früher gemini.js) - vollständig überarbeitet für Kitegg
 const fs = require("fs");
 const path = require("path");
-const { GoogleGenerativeAI } = require("@google/generative-ai");
 const templates = require("./summary-templates");
 
-// Load the configuration from config.json in the root directory
+// Lade die Konfiguration aus config.json im Root-Verzeichnis
 let config;
 try {
 	const configPath = path.resolve(__dirname, "../../config.json");
 	config = JSON.parse(fs.readFileSync(configPath, "utf8"));
 } catch (error) {
-	console.error("Error loading configuration:", error.message);
+	console.error("Fehler beim Laden der Konfiguration:", error.message);
 	console.error(
-		"Please ensure a valid config.json exists in the root directory."
+		"Bitte stelle sicher, dass eine gültige config.json im Root-Verzeichnis existiert."
 	);
 	process.exit(1);
 }
-
-// Initialize the Gemini API
-const genAI = new GoogleGenerativeAI(config.GEMINI_API_KEY);
 
 /**
  * Analyzes a text and identifies the best template type based on the content
@@ -122,35 +118,101 @@ function applyTemplate(template, transcript) {
 }
 
 /**
- * Summarizes a text using Gemini
+ * Summarizes a text using Kitegg API
  * @param {string} text - The text to summarize
  * @param {string} templateType - Optional template type (if null, automatic detection)
  * @returns {Promise<string>} - The summary
  */
 async function summarize(text, templateType = null) {
+	const apiKey = config.KITEGG_API_KEY;
+	if (!apiKey) {
+		console.error("❌ KITEGG_API_KEY nicht in config.json gefunden.");
+		return `Zusammenfassung (ohne KI - Konfigurationsfehler): ${text
+			.split(".")
+			.slice(0, 2)
+			.join(".")}...`;
+	}
+
 	try {
-		// Use gemini-1.5-pro or generative-ai-vision instead of gemini-pro
-		const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
-
-		// Use the specified template type or detect it automatically
+		// Erkenne Vorlagentyp (meeting, projekt, etc.)
 		const type = templateType || detectTemplateType(text);
-		console.log(`🔍 Erkannter Vorlagentyp: ${type}`);
+		console.log(`🔍 Erkannter Vorlagentyp (für Kitegg): ${type}`);
 
-		// Retrieve the appropriate template
-		const template = templates[type] || templates.standard;
+		// Wähle passende Vorlage aus und befülle sie
+		const templateToUse = templates[type] || templates.standard;
+		const promptContent = applyTemplate(templateToUse, text);
 
-		// Populate the template
-		const prompt = applyTemplate(template, text);
+		console.log(
+			`🤖 Sende Anfrage an Kitegg API (${promptContent.length} Zeichen)...`
+		);
 
-		// Send the request to Gemini
-		const result = await model.generateContent(prompt);
-		const summary = result.response.text();
+		// Bereite Anfrage vor
+		const messages = [{ role: "user", content: promptContent }];
+		const response = await fetch(
+			"https://chat1.kitegg.de/api/chat/completions",
+			{
+				method: "POST",
+				headers: {
+					Authorization: `Bearer ${apiKey}`,
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({
+					model: "mistralai/Mistral-Small-3.1-24B-Instruct-2503",
+					messages: messages,
+					stream: false,
+				}),
+			}
+		);
 
-		return summary;
+		// Fehlerbehandlung der API-Antwort
+		if (!response.ok) {
+			const status = response.status;
+			let errorText = "";
+			try {
+				errorText = await response.text();
+			} catch (e) {
+				errorText = "Fehler beim Lesen der Antwort";
+			}
+
+			console.error(`❌ Kitegg API Fehler (${status}):`, errorText);
+
+			if (status === 401 || status === 403) {
+				throw new Error(
+					"Ungültiger API-Schlüssel oder Berechtigungsproblem"
+				);
+			} else if (status === 429) {
+				throw new Error("API-Limit erreicht");
+			} else {
+				throw new Error(`HTTP-Fehler ${status}`);
+			}
+		}
+
+		// Erfolgreiche Antwort verarbeiten
+		const data = await response.json();
+		console.log("✅ Kitegg-Antwort erhalten");
+
+		if (
+			data.choices &&
+			data.choices[0] &&
+			data.choices[0].message &&
+			data.choices[0].message.content
+		) {
+			const summary = data.choices[0].message.content.trim();
+			console.log(`📝 Zusammenfassungslänge: ${summary.length} Zeichen`);
+			return summary;
+		} else {
+			console.error(
+				"❌ Unerwartete Antwortstruktur von Kitegg API:",
+				JSON.stringify(data).substring(0, 200) + "..."
+			);
+			throw new Error("Ungültige Antwort von Kitegg API");
+		}
 	} catch (error) {
-		console.error("Error during summarization:", error.message);
-		// Immer eine lokale Zusammenfassung zurückgeben, nie eine API-Limit-Fehlermeldung
-		return `Zusammenfassung (ohne KI): ${text
+		console.error(
+			"❌ Fehler bei der Zusammenfassung mit Kitegg:",
+			error.message
+		);
+		return `Zusammenfassung (ohne KI - ${error.message}): ${text
 			.split(".")
 			.slice(0, 2)
 			.join(".")}...`;

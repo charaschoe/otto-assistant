@@ -1,5 +1,6 @@
 // index.js
 const fs = require("fs");
+const path = require("path"); // Path-Modul hinzugefügt
 let config;
 try {
 	const configPath = path.resolve(__dirname, "../config.json");
@@ -12,36 +13,127 @@ try {
 	console.warn("⚠️ config.json not found or invalid. Using default values.");
 	config = {
 		GEMINI_API_KEY: "default-key",
+		KITEGG_API_KEY: "default-key", // Kitegg-Schlüssel hinzugefügt
 		NOTION_API_KEY: "default-key",
 		NOTION_DATABASE_ID: "default-id",
 	};
 }
-const { recordAudio } = require("./audio/recorder");
+const { recordAudio, getAvailableRecordings } = require("./audio/recorder");
 const {
 	saveTranscriptToObsidian,
 	saveSummaryToObsidian,
 } = require("./integrations/obsidian-writer");
-const { summarize, detectTemplateType } = require("./utils/gemini");
+const { summarize, detectTemplateType } = require("./utils/kitegg-service");
 const { exportToNotion } = require("./integrations/notion-export");
 const { exportToMiro } = require("./integrations/miro-export");
 const { spawn } = require("child_process");
-const path = require("path");
 const { generateTitle } = require("./utils/title-generator");
 
 const readline = require("readline");
+
+// Test-Audiodateipfad - diese Datei wird für Tests verwendet
+const TEST_AUDIO_FILE = path.resolve(__dirname, "recordings", "test.wav");
 
 const rl = readline.createInterface({
 	input: process.stdin,
 	output: process.stdout,
 });
 
-rl.question("Enter 'start' to begin recording: ", async (answer) => {
-	if (answer.trim().toLowerCase() === "start") {
-		console.log("🎙️ Starting recording (25 seconds)...");
-		const file = await recordAudio("test.wav", 25000);
-		console.log("✅ Recording saved:", file);
+rl.question(
+	"Enter 'start' to begin recording or 'test' to use test audio: ",
+	async (answer) => {
+		let audioFile;
 
-		const transcript = await transcribeAudio(file);
+		if (answer.trim().toLowerCase() === "test") {
+			// Verbesserte Testmodus-Logik: Anzeige und Auswahl verfügbarer Aufnahmen
+			const availableRecordings = getAvailableRecordings();
+
+			if (availableRecordings.length === 0) {
+				console.error("❌ Keine Testaufnahmen gefunden!");
+				console.log(
+					"Bitte nimm zuerst eine Testaufnahme auf mit 'start'"
+				);
+				rl.close();
+				return;
+			}
+
+			console.log("\n📂 Verfügbare Testaufnahmen:");
+			console.log("0. Neueste Aufnahme (test.wav)");
+
+			// Anzeige der verfügbaren Aufnahmen mit Datum und Uhrzeit
+			availableRecordings.forEach((recording, index) => {
+				// Extrahiere Datum und Uhrzeit aus dem Dateinamen
+				const nameParts = path
+					.basename(recording.name, ".wav")
+					.split("-");
+				if (nameParts.length >= 7) {
+					const date = `${nameParts[1]}-${nameParts[2]}-${nameParts[3]}`;
+					const time = `${nameParts[4]}:${nameParts[5]}:${nameParts[6]}`;
+					console.log(`${index + 1}. ${date} ${time}`);
+				} else {
+					console.log(
+						`${index + 1}. ${path.basename(recording.name)}`
+					);
+				}
+			});
+
+			// Erzeugen einer neuen Readline-Instanz für die Unterauswahl
+			const testRl = readline.createInterface({
+				input: process.stdin,
+				output: process.stdout,
+			});
+
+			try {
+				const selection = await new Promise((resolve) => {
+					testRl.question(
+						"\nWähle eine Aufnahme (0-" +
+							availableRecordings.length +
+							"): ",
+						(answer) => {
+							testRl.close();
+							resolve(answer.trim());
+						}
+					);
+				});
+
+				const selectionNum = parseInt(selection);
+				if (
+					isNaN(selectionNum) ||
+					selectionNum < 0 ||
+					selectionNum > availableRecordings.length
+				) {
+					console.log(
+						"⚠️ Ungültige Auswahl, verwende die neueste Aufnahme."
+					);
+					audioFile = TEST_AUDIO_FILE;
+				} else if (selectionNum === 0) {
+					console.log("🎵 Verwende die neueste Aufnahme (test.wav)");
+					audioFile = TEST_AUDIO_FILE;
+				} else {
+					audioFile = availableRecordings[selectionNum - 1].path;
+					console.log(
+						`🎵 Verwende Aufnahme: ${path.basename(audioFile)}`
+					);
+				}
+			} catch (error) {
+				console.error("Fehler bei der Auswahl:", error);
+				console.log("⚠️ Verwende die neueste Aufnahme (test.wav)");
+				audioFile = TEST_AUDIO_FILE;
+			}
+		} else if (answer.trim().toLowerCase() === "start") {
+			// Normale Aufnahme
+			console.log("🎙️ Starting recording (25 seconds)...");
+			audioFile = await recordAudio("test.wav", 25000);
+			console.log("✅ Recording saved:", audioFile);
+		} else {
+			console.log(
+				"⚠️ Ungültige Eingabe. Bitte 'start' oder 'test' eingeben."
+			);
+			rl.close();
+			return;
+		}
+
+		const transcript = await transcribeAudio(audioFile);
 
 		if (transcript.trim()) {
 			// Erkenne den Vorlagentyp basierend auf dem Transkript
@@ -97,11 +189,8 @@ rl.question("Enter 'start' to begin recording: ", async (answer) => {
 			console.log("⚠️ No transcript found.");
 		}
 		rl.close();
-	} else {
-		console.log("Invalid input. Please enter 'start'.");
-		rl.close();
 	}
-});
+);
 
 function transcribeAudio(audioFile) {
 	console.log("🧠 Starte Transkription...");

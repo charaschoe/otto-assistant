@@ -33,11 +33,11 @@ npm install
 pip install -r requirements.txt
 ```
 
-4. API-Schlüssel für Google Gemini in `config.json` hinzufügen:
+4. API-Schlüssel für Kitegg in `config.json` hinzufügen:
 
 ```json
 {
-	"GEMINI_API_KEY": "your-api-key-here"
+	"KITEGG_API_KEY": "your-api-key-here"
 }
 ```
 
@@ -52,7 +52,9 @@ pip install -r requirements.txt
 npm run start
 ```
 
-3. Geben Sie `start` ein, um die Aufnahme zu starten. Die Aufnahme dauert standardmäßig 25 Sekunden.
+3. Wählen Sie eine der folgenden Optionen:
+    - Geben Sie `start` ein, um eine neue Aufnahme zu starten. Die Aufnahme dauert standardmäßig 25 Sekunden.
+    - Geben Sie `test` ein, um den Testmodus zu verwenden, der die Auswahl bereits vorhandener Aufnahmen ermöglicht.
 
 ### Was passiert nach der Aufnahme?
 
@@ -61,10 +63,34 @@ npm run start
 -   Die Transkription wird semantisch analysiert:
     -   Wichtige Konzepte und Entitäten werden identifiziert
     -   Passende Emojis werden zugeordnet
-    -   Ein kontextrelevanter Titel wird mit Google Gemini generiert
+    -   Ein kontextrelevanter Titel wird mit der Kitegg-API generiert
 -   Die verarbeitete Transkription wird:
     -   Mit intelligenten Verknüpfungen in Obsidian gespeichert
     -   In konfigurierte Notion-Datenbanken exportiert (wenn API-Schlüssel vorhanden)
+
+### Testmodus
+
+Der erweiterte Testmodus ermöglicht es, bereits aufgenommene Audio-Dateien wiederzuverwenden, was die Entwicklung und Tests beschleunigt:
+
+-   Die letzten 5 Aufnahmen werden automatisch gespeichert
+-   Jede Aufnahme erhält einen Zeitstempel im Format `recording-YYYY-MM-DD-HH-MM-SS.wav`
+-   Die neueste Aufnahme ist immer als `test.wav` verfügbar
+-   Ältere Aufnahmen werden automatisch gelöscht
+
+Um den Testmodus zu nutzen:
+
+1. Führen Sie mindestens eine Aufnahme mit `start` durch
+2. Starten Sie das Programm neu und wählen Sie `test`
+3. Wählen Sie eine der angezeigten Aufnahmen aus der Liste:
+    - Option 0: Die neueste Aufnahme (test.wav)
+    - Optionen 1-5: Frühere Aufnahmen mit Datums- und Zeitangabe
+
+Vorteile des Testmodus:
+
+-   Zeitsparend: Keine Wartezeit für neue Aufnahmen
+-   Konsistenz: Gleiche Audiodaten für verschiedene Programmversionen
+-   Flexibilität: Testen mit verschiedenen Aufnahmen möglich
+-   Entwicklungsfreundlich: Schnelles Testen von Änderungen
 
 ### Mehrsprachige Unterstützung
 
@@ -92,8 +118,9 @@ Otto erstellt automatisch ein Netzwerk verknüpfter Informationen:
     -   Deutsch
     -   Englisch
     -   [Weitere Sprachen werden kontinuierlich hinzugefügt]
--   **Intelligente Titelgenerierung** 🏷️: Automatische Erstellung sinnvoller Titel mit Google Gemini.
+-   **Intelligente Titelgenerierung** 🏷️: Automatische Erstellung sinnvoller Titel mit der Kitegg-API.
 -   **Semantische Analyse** 🧠: Identifizierung wichtiger Konzepte und deren Beziehungen im Text.
+-   **Testmodus** 🧪: Wiederverwendung vorheriger Aufnahmen für schnelles Testen und Entwicklung.
 
 ### Wissensmanagement-Integrationen
 
@@ -149,13 +176,25 @@ Die Obsidian-Integration arbeitet standardmäßig mit einem lokalen Obsidian-Vau
 const USER_OBSIDIAN_VAULT = "/path/to/your/vault";
 ```
 
+### KI-API Integration
+
+Um die KI-Funktionen zu nutzen, muss ein Kitegg-API-Key in der `config.json` konfiguriert werden:
+
+```json
+{
+	"KITEGG_API_KEY": "your-kitegg-api-key"
+}
+```
+
+Die KI-Integration nutzt das Kitegg-API mit dem Mistral-Small-3.1-24B-Instruct-Modell für die Generierung von Zusammenfassungen und Titeln.
+
 ### Notion-Integration
 
 Um die Notion-Integration zu nutzen, müssen Sie Ihre Notion API-Schlüssel und Datenbank-ID in der `config.json` hinterlegen:
 
 ```json
 {
-	"GEMINI_API_KEY": "your-gemini-api-key",
+	"KITEGG_API_KEY": "your-kitegg-api-key",
 	"NOTION_API_KEY": "your-notion-api-key",
 	"NOTION_DATABASE_ID": "your-notion-database-id"
 }
@@ -167,7 +206,7 @@ Um die Miro-Integration zu nutzen, benötigen Sie einen Miro API-Key (OAuth2 ode
 
 ```json
 {
-	"GEMINI_API_KEY": "your-gemini-api-key",
+	"KITEGG_API_KEY": "your-kitegg-api-key",
 	"NOTION_API_KEY": "your-notion-api-key",
 	"NOTION_DATABASE_ID": "your-notion-database-id",
 	"MIRO_API_KEY": "your-miro-api-key",
@@ -204,6 +243,18 @@ Das System unterstützt automatisch beide Sprachen (Deutsch und Englisch). Sie k
 ### Emoji-Konfiguration
 
 Sie können die automatische Emoji-Zuordnung anpassen, indem Sie die Kontexterkennung in den entsprechenden Modulen erweitern.
+
+### Aufnahme-Konfiguration
+
+Die Aufnahmeeinstellungen können in der Datei `src/audio/recorder.js` angepasst werden:
+
+```javascript
+// Anzahl der zu behaltenden Aufnahmen im recordings-Verzeichnis
+const KEEP_RECORDINGS_COUNT = 5;
+
+// Aufnahmedauer (in Millisekunden)
+const RECORDING_DURATION = 25000;
+```
 
 ## Sicherheitshinweise
 

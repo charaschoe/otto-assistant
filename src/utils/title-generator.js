@@ -1,4 +1,4 @@
-const { summarize } = require("./gemini");
+const { summarize } = require("./kitegg-service");
 
 /**
  * Generates a dynamic title based on a transcript
