@@ -1,440 +1,280 @@
-// notion-export.js
+/**
+ * Notion Export Integration für Otto Assistant
+ * Erweitert für Creative Agency Features
+ */
+
 const fs = require("fs");
 const path = require("path");
-const { Client } = require("@notionhq/client");
-const { generateTitle } = require("../utils/title-generator");
-const {
-	extractEntities,
-	identifyEntitiesWithEmojis,
-	detectLanguage,
-} = require("../utils/entity-linker");
+const axios = require("axios");
+const { notionCreativeSelector } = require("./notion-creative-templates");
+const { selectBestTemplate } = require("../utils/summary-templates");
 
-// Lade die Konfiguration aus der config.json im Root-Verzeichnis
-let config;
+// Lade Notion-API-Konfiguration aus config.json
+let config = {};
 try {
-	const configPath = path.resolve(__dirname, "../../config.json");
-	config = JSON.parse(fs.readFileSync(configPath, "utf8"));
-} catch (error) {
-	console.error("Fehler beim Laden der Konfiguration:", error.message);
-	console.error(
-		"Bitte stelle sicher, dass eine gültige config.json im Root-Verzeichnis existiert."
-	);
-	process.exit(1);
+  const configPath = path.resolve(__dirname, "../../config.json");
+  config = JSON.parse(fs.readFileSync(configPath, "utf8"));
+} catch (e) {
+  console.warn("⚠️ Konnte config.json nicht laden, Notion-Export deaktiviert.");
 }
 
-// Initialisiere den Notion-Client
-const notion = new Client({ auth: config.NOTION_API_KEY });
-const databaseId = config.NOTION_DATABASE_ID;
+const NOTION_API_BASE = "https://api.notion.com/v1";
+const NOTION_VERSION = "2022-06-28";
 
 /**
- * Holt die verfügbaren Eigenschaften einer Notion-Datenbank
- * @param {string} databaseId - Die ID der Datenbank
- * @returns {Promise<Object>} - Ein Objekt mit Informationen über die Datenbankeigenschaften
+ * Exportiert Transkript und Zusammenfassung als Notion-Page
+ * @param {string} transcript - Das Transkript
+ * @param {string} summary - Die Zusammenfassung
+ * @param {Array} entities - Extrahierte Entitäten
+ * @param {object} entityEmojis - Entitäten mit Emojis
+ * @param {object} options - Zusätzliche Optionen
+ * @returns {Promise<string|null>} - Die URL der erstellten Page oder null
  */
-async function getNotionDatabaseProperties() {
-	try {
-		if (!config.NOTION_API_KEY || !databaseId) {
-			console.warn(
-				"⚠️ Notion API-Schlüssel oder Datenbank-ID fehlt in der Konfiguration."
-			);
-			return null;
-		}
+async function exportToNotion(transcript, summary, entities = [], entityEmojis = {}, options = {}) {
+  const apiKey = config.NOTION_API_KEY || process.env.NOTION_API_KEY;
+  const databaseId = config.NOTION_DATABASE_ID || process.env.NOTION_DATABASE_ID;
+  
+  if (!apiKey) {
+    console.error("❌ Notion API-Key fehlt.");
+    return null;
+  }
+  
+  if (!databaseId) {
+    console.error("❌ Notion Database-ID fehlt.");
+    return null;
+  }
 
-		console.log("🔍 Prüfe Notion-Datenbank-Eigenschaften...");
-		const response = await notion.databases.retrieve({
-			database_id: databaseId,
-		});
-		return response.properties || {};
-	} catch (error) {
-		console.error(
-			"Fehler beim Abrufen der Notion-Datenbank:",
-			error.message
-		);
-		return null;
-	}
-}
-
-/**
- * Exportiert einen Inhalt zu Notion mit dynamischem Titel
- * @param {string} content - Der zu exportierende Inhalt
- * @param {string} baseTitle - Optionaler Basis-Titel
- * @param {Object} options - Zusätzliche Optionen (templateType, tags, etc.)
- * @returns {Promise<string|null>} - URL der erstellten Notion-Seite oder null bei Fehler
- */
-async function exportToNotion(content, baseTitle = "Notiz", options = {}) {
-	try {
-		if (!config.NOTION_API_KEY || !databaseId) {
-			console.warn(
-				"⚠️ Notion API-Schlüssel oder Datenbank-ID fehlt in der Konfiguration."
-			);
-			return null;
-		}
-
-		// Erkenne Sprache des Textes
-		const language = detectLanguage(content);
-		console.log(
-			`🌐 Erkannte Sprache: ${language === "de" ? "Deutsch" : "Englisch"}`
-		);
-
-		// Passe den Basis-Titel an die erkannte Sprache an
-		if (!options.baseTitle) {
-			baseTitle = language === "de" ? "Notiz" : "Note";
-		}
-
-		// Generiere einen dynamischen Titel
-		const title = generateTitle(content, baseTitle);
-
-		// Identifiziere Entitäten und zugehörige Emojis
-		const entityEmojis = identifyEntitiesWithEmojis(content);
-		const entities = Object.keys(entityEmojis);
-
-		// Wähle ein Emoji für die Notiz basierend auf den Entitäten
-		const noteEmoji = Object.values(entityEmojis)[0] || "📝";
-
-		// Standardoptionen
-		const defaultOptions = {
-			templateType: null,
-			tags: [],
-			status: language === "de" ? "Neu" : "New",
-			priority: language === "de" ? "Mittel" : "Medium",
-			emoji: noteEmoji,
-			language: language === "de" ? "Deutsch" : "English",
-		};
-
-		// Kombiniere Standardoptionen mit übergebenen Optionen
-		const finalOptions = { ...defaultOptions, ...options };
-
-		// Extrahiere Tags aus den Entitäten, wenn keine Tags übergeben wurden
-		if (!options.tags || options.tags.length === 0) {
-			finalOptions.tags = entities.slice(0, 5); // Begrenze auf 5 Tags
-		}
-
-		// Hole die Datenbankeigenschaften
-		const dbProperties = await getNotionDatabaseProperties();
-
-		if (!dbProperties) {
-			console.warn(
-				"⚠️ Konnte Datenbankeigenschaften nicht abrufen, überprüfe die Konfiguration oder die Datenbank-ID."
-			);
-
-			// Minimal-Version mit Name/Titel und Emoji/Sprache
-			const titleWithEmoji = `${finalOptions.emoji} ${title}`;
-			finalOptions.entityEmojis = entityEmojis; // Emojis für Entitäten hinzufügen
-
-			const response = await notion.pages.create({
-				parent: { database_id: databaseId },
-				properties: {
-					// Die einzige universelle Eigenschaft ist "title", die in allen Datenbanken verfügbar ist
-					Name: {
-						title: [{ text: { content: titleWithEmoji } }],
-					},
-				},
-				children: createContentBlocks(content, finalOptions),
-				icon: {
-					emoji: finalOptions.emoji,
-				},
-			});
-
-			console.log(
-				`✅ Notiz mit minimalem Schema zu Notion exportiert: ${response.url}`
-			);
-			return response.url;
-		}
-
-		// Erstelle Eigenschaften basierend auf den tatsächlich verfügbaren Datenbank-Eigenschaften
-		const properties = {};
-		if (!dbProperties || Object.keys(dbProperties).length === 0) {
-			console.error(
-				"❌ Keine gültigen Datenbankeigenschaften gefunden. Export abgebrochen."
-			);
-			return null;
-		}
-
-		// Titel mit Emoji hinzufügen (immer erforderlich)
-		// Finde die Titel-Eigenschaft (normalerweise "Name", "Titel", "Title" usw.)
-		const titleProperty = findTitleProperty(dbProperties);
-		const titleWithEmoji = `${finalOptions.emoji} ${title}`;
-
-		if (titleProperty) {
-			properties[titleProperty] = {
-				title: [{ text: { content: titleWithEmoji } }],
-			};
-		} else {
-			// Fallback: Versuche "Name" oder die erste Eigenschaft
-			const firstProperty = Object.keys(dbProperties)[0];
-			properties[firstProperty || "Name"] = {
-				title: [{ text: { content: titleWithEmoji } }],
-			};
-		}
-
-		// Optionale Eigenschaften hinzufügen, aber nur wenn sie in der Datenbank existieren
-
-		// Status
-		if (dbProperties.Status && finalOptions.status) {
-			if (dbProperties.Status.type === "select") {
-				properties.Status = {
-					select: { name: finalOptions.status },
-				};
-			}
-		}
-
-		// Tags
-		if (
-			dbProperties.Tags &&
-			finalOptions.tags &&
-			finalOptions.tags.length > 0
-		) {
-			if (dbProperties.Tags.type === "multi_select") {
-				properties.Tags = {
-					multi_select: finalOptions.tags.map((tag) => ({
-						name: tag,
-					})),
-				};
-			}
-		}
-
-		// Priorität
-		if (dbProperties.Priority && finalOptions.priority) {
-			if (dbProperties.Priority.type === "select") {
-				properties.Priority = {
-					select: { name: finalOptions.priority },
-				};
-			}
-		}
-
-		// Typ
-		if (dbProperties.Type && finalOptions.templateType) {
-			if (dbProperties.Type.type === "select") {
-				properties.Type = {
-					select: { name: finalOptions.templateType },
-				};
-			}
-		}
-
-		// Datum
-		if (dbProperties.Created && dbProperties.Created.type === "date") {
-			properties.Created = {
-				date: { start: new Date().toISOString() },
-			};
-		} else if (dbProperties.Date && dbProperties.Date.type === "date") {
-			properties.Date = {
-				date: { start: new Date().toISOString() },
-			};
-		}
-
-		// Füge entityEmojis zu den Optionen hinzu
-		finalOptions.entityEmojis = entityEmojis;
-
-		// Erstelle die Seite in Notion
-		const response = await notion.pages.create({
-			parent: { database_id: databaseId },
-			properties,
-			children: createContentBlocks(content, finalOptions),
-			icon: {
-				emoji: finalOptions.emoji,
-			},
-		});
-
-		console.log(`✅ Inhalt zu Notion exportiert: ${response.url}`);
-		return response.url;
-	} catch (error) {
-		console.error("Fehler beim Exportieren zu Notion:", error.message);
-		return null;
-	}
+  try {
+    // 1. Template-Typ ermitteln
+    const templateType = options.templateType || selectBestTemplate(transcript);
+    console.log(`🎨 Notion Template-Typ: ${templateType}`);
+    
+    // 2. Template und Properties erstellen
+    const template = notionCreativeSelector.selectTemplate(transcript, summary, templateType);
+    const properties = notionCreativeSelector.createPageProperties(
+      template, 
+      transcript, 
+      summary, 
+      templateType, 
+      entities, 
+      entityEmojis
+    );
+    
+    // 3. Content erstellen
+    const templateData = notionCreativeSelector.extractTemplateData(
+      transcript, 
+      summary, 
+      templateType, 
+      entities, 
+      entityEmojis
+    );
+    const content = notionCreativeSelector.createPageContent(template, transcript, summary, templateData);
+    
+    // 4. Notion Page erstellen
+    const pageData = {
+      parent: { database_id: databaseId },
+      properties: properties,
+      children: createNotionBlocks(content)
+    };
+    
+    const response = await axios.post(`${NOTION_API_BASE}/pages`, pageData, {
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Notion-Version": NOTION_VERSION,
+        "Content-Type": "application/json"
+      }
+    });
+    
+    const pageUrl = response.data.url;
+    console.log(`✅ Notion Page erstellt: ${pageUrl}`);
+    
+    return pageUrl;
+    
+  } catch (error) {
+    console.error("❌ Notion Export fehlgeschlagen:", error.response?.data || error.message);
+    return null;
+  }
 }
 
 /**
- * Markiert Aufgaben im Text und erstellt Inhaltsblöcke für Notion basierend auf dem Inhalt und Optionen
- * @param {string} content - Der zu strukturierende Inhalt
- * @param {Object} options - Optionen für die Strukturierung
- * @returns {Array} - Array von Notion-Blocks
+ * Erstellt Notion Blocks aus Markdown-Content
+ * @param {string} content - Markdown-Content
+ * @returns {Array} - Array von Notion Blocks
  */
-function createContentBlocks(content, options = {}) {
-	// Aufgaben im Text erkennen und markieren
-	content = content.replace(/(?:-|\*|\d+\.)\s*(.*?)(?:\n|$)/g, "[] $1");
-	const blocks = [];
-
-	// Füge einen Notiztyp-Block hinzu, falls vorhanden
-	if (options.templateType) {
-		blocks.push({
-			object: "block",
-			callout: {
-				rich_text: [
-					{ text: { content: `Typ: ${options.templateType}` } },
-				],
-				icon: { emoji: options.emoji || "📝" },
-				color: "blue_background",
-			},
-		});
-	}
-
-	// Bestimme Überschrift basierend auf Sprache
-	const contentHeading =
-		options.language && options.language === "English"
-			? "Content"
-			: "Inhalt";
-
-	blocks.push({
-		object: "block",
-		heading_1: {
-			rich_text: [{ text: { content: contentHeading } }],
-		},
-	});
-
-	// Teile den Inhalt in kleinere Stücke, um Notion-Größenbeschränkungen zu umgehen
-	const contentChunks = splitContentIntoChunks(content, 2000);
-
-	// Füge die Inhaltsstücke als separate Paragraphen hinzu
-	for (const chunk of contentChunks) {
-		blocks.push({
-			object: "block",
-			paragraph: {
-				rich_text: [{ text: { content: chunk } }],
-			},
-		});
-	}
-
-	// Füge Metadaten am Ende hinzu
-	blocks.push({
-		object: "block",
-		divider: {},
-	});
-
-	// Lokalisierte Datumsformatierung und Sprachhinweis
-	const dateLabel =
-		options.language && options.language === "English"
-			? "Created on"
-			: "Erstellt am";
-	const languageEmoji =
-		options.language && options.language === "English" ? "🇬🇧" : "🇩🇪";
-	const locale =
-		options.language && options.language === "English" ? "en-US" : "de-DE";
-
-	blocks.push({
-		object: "block",
-		paragraph: {
-			rich_text: [
-				{
-					text: {
-						content: `${languageEmoji} ${
-							options.language || "Deutsch"
-						} | ${dateLabel}: ${new Date().toLocaleString(locale)}`,
-					},
-				},
-			],
-		},
-	});
-
-	// Füge Entitäten mit Emojis hinzu, wenn vorhanden
-	if (options.entityEmojis && Object.keys(options.entityEmojis).length > 0) {
-		// Überschrift für Entitäten
-		const conceptsHeading =
-			options.language && options.language === "English"
-				? "Important Concepts"
-				: "Wichtige Konzepte";
-
-		blocks.push({
-			object: "block",
-			heading_2: {
-				rich_text: [{ text: { content: conceptsHeading } }],
-			},
-		});
-
-		// Bullet-Liste mit Entitäten und Emojis
-		Object.entries(options.entityEmojis).forEach(([entity, emoji]) => {
-			blocks.push({
-				object: "block",
-				bulleted_list_item: {
-					rich_text: [{ text: { content: `${emoji} ${entity}` } }],
-				},
-			});
-		});
-	}
-
-	return blocks;
+function createNotionBlocks(content) {
+  const blocks = [];
+  const lines = content.split('\n');
+  
+  for (const line of lines) {
+    const trimmedLine = line.trim();
+    
+    if (!trimmedLine) continue;
+    
+    // Headers
+    if (trimmedLine.startsWith('# ')) {
+      blocks.push({
+        object: "block",
+        type: "heading_1",
+        heading_1: {
+          rich_text: [{ type: "text", text: { content: trimmedLine.substring(2) } }]
+        }
+      });
+    } else if (trimmedLine.startsWith('## ')) {
+      blocks.push({
+        object: "block",
+        type: "heading_2",
+        heading_2: {
+          rich_text: [{ type: "text", text: { content: trimmedLine.substring(3) } }]
+        }
+      });
+    } else if (trimmedLine.startsWith('### ')) {
+      blocks.push({
+        object: "block",
+        type: "heading_3",
+        heading_3: {
+          rich_text: [{ type: "text", text: { content: trimmedLine.substring(4) } }]
+        }
+      });
+    }
+    // Bullet Lists
+    else if (trimmedLine.startsWith('- ')) {
+      blocks.push({
+        object: "block",
+        type: "bulleted_list_item",
+        bulleted_list_item: {
+          rich_text: [{ type: "text", text: { content: trimmedLine.substring(2) } }]
+        }
+      });
+    }
+    // Numbered Lists
+    else if (/^\d+\.\s/.test(trimmedLine)) {
+      blocks.push({
+        object: "block",
+        type: "numbered_list_item",
+        numbered_list_item: {
+          rich_text: [{ type: "text", text: { content: trimmedLine.replace(/^\d+\.\s/, '') } }]
+        }
+      });
+    }
+    // Code Blocks
+    else if (trimmedLine.startsWith('```')) {
+      // Handle code blocks (simplified)
+      blocks.push({
+        object: "block",
+        type: "code",
+        code: {
+          rich_text: [{ type: "text", text: { content: "Code Block" } }],
+          language: "javascript"
+        }
+      });
+    }
+    // Dividers
+    else if (trimmedLine === '---') {
+      blocks.push({
+        object: "block",
+        type: "divider",
+        divider: {}
+      });
+    }
+    // Regular paragraphs
+    else {
+      // Skip empty lines and markdown formatting
+      if (trimmedLine && !trimmedLine.startsWith('**') && !trimmedLine.startsWith('*')) {
+        blocks.push({
+          object: "block",
+          type: "paragraph",
+          paragraph: {
+            rich_text: [{ type: "text", text: { content: trimmedLine } }]
+          }
+        });
+      }
+    }
+  }
+  
+  return blocks;
 }
 
 /**
- * Teilt einen langen Text in kleinere Stücke
- * @param {string} content - Der aufzuteilende Inhalt
- * @param {number} chunkSize - Die maximale Größe pro Stück
- * @returns {string[]} - Array von Textstücken
+ * Erstellt eine neue Notion Database für Creative Agency Templates
+ * @param {string} templateType - Der Template-Typ
+ * @returns {Promise<string|null>} - Die Database-ID oder null
  */
-function splitContentIntoChunks(content, chunkSize) {
-	const chunks = [];
-	let remaining = content;
-
-	while (remaining.length > 0) {
-		// Finde einen passenden Trennpunkt (Zeilenumbruch oder Leerzeichen)
-		let splitPoint = Math.min(chunkSize, remaining.length);
-
-		// Falls wir mitten in einem Wort trennen würden, gehe zum letzten Leerzeichen zurück
-		if (
-			splitPoint < remaining.length &&
-			remaining[splitPoint] !== " " &&
-			remaining[splitPoint] !== "\n"
-		) {
-			const lastSpace = remaining.lastIndexOf(" ", splitPoint);
-			const lastNewline = remaining.lastIndexOf("\n", splitPoint);
-
-			// Verwende den letzten natürlichen Trennpunkt
-			splitPoint = Math.max(lastSpace, lastNewline);
-
-			// Falls kein passender Trennpunkt gefunden wurde, trenne einfach beim Zeichenlimit
-			if (splitPoint <= 0) {
-				splitPoint = chunkSize;
-			}
-		}
-
-		// Extrahiere das aktuelle Stück und entferne es vom verbleibenden Text
-		chunks.push(remaining.substring(0, splitPoint).trim());
-		remaining = remaining.substring(splitPoint).trim();
-	}
-
-	return chunks;
+async function createCreativeDatabase(templateType) {
+  const apiKey = config.NOTION_API_KEY || process.env.NOTION_API_KEY;
+  const parentPageId = config.NOTION_PARENT_PAGE_ID || process.env.NOTION_PARENT_PAGE_ID;
+  
+  if (!apiKey || !parentPageId) {
+    console.error("❌ Notion API-Key oder Parent Page-ID fehlt für Database-Erstellung.");
+    return null;
+  }
+  
+  try {
+    const template = notionCreativeSelector.selectTemplate('', '', templateType);
+    
+    const databaseData = {
+      parent: { page_id: parentPageId },
+      title: [{ type: "text", text: { content: template.name } }],
+      properties: {}
+    };
+    
+    // Properties vom Template übernehmen
+    Object.entries(template.properties).forEach(([key, config]) => {
+      databaseData.properties[key] = { [config.type]: config };
+    });
+    
+    const response = await axios.post(`${NOTION_API_BASE}/databases`, databaseData, {
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Notion-Version": NOTION_VERSION,
+        "Content-Type": "application/json"
+      }
+    });
+    
+    console.log(`✅ Notion Database erstellt: ${response.data.id}`);
+    return response.data.id;
+    
+  } catch (error) {
+    console.error("❌ Database-Erstellung fehlgeschlagen:", error.response?.data || error.message);
+    return null;
+  }
 }
 
 /**
- * Findet die Titel-Eigenschaft in einer Notion-Datenbank
- * @param {Object} properties - Die Eigenschaften der Datenbank
- * @returns {string|null} - Der Name der Titel-Eigenschaft oder null
+ * Test-Funktion für Notion Export
  */
-function findTitleProperty(properties) {
-	// Typische Namen für Titel-Eigenschaften
-	const titlePropertyNames = [
-		"Name",
-		"Titel",
-		"Title",
-		"name",
-		"titel",
-		"title",
-	];
-
-	// Suche nach einer Eigenschaft mit Typ 'title'
-	for (const [key, value] of Object.entries(properties)) {
-		if (value.type === "title") {
-			return key;
-		}
-	}
-
-	// Fallback: Suche nach typischen Namen
-	for (const name of titlePropertyNames) {
-		if (properties[name]) {
-			return name;
-		}
-	}
-
-	return null;
-}
-
-/**
- * Alte Funktion für Abwärtskompatibilität
- */
-async function exportNote(title, content) {
-	return exportToNotion(content, title);
+async function testNotionExport() {
+  const testData = {
+    transcript: `
+      Client: Mercedes-Benz
+      Projekt: EQS Kampagne 2025
+      Zielgruppe: Premium-Kunden, umweltbewusst
+      Botschaft: Luxus trifft Nachhaltigkeit
+      Team: Sarah (Creative Director), Max (Art Director)
+    `,
+    summary: "Creative Briefing für Mercedes EQS Elektro-Kampagne",
+    entities: ['Mercedes-Benz', 'EQS', 'Kampagne', 'Premium'],
+    entityEmojis: { 'Mercedes-Benz': '🚗', 'EQS': '⚡', 'Kampagne': '📢' }
+  };
+  
+  console.log("🧪 Testing Notion Export...");
+  const result = await exportToNotion(
+    testData.transcript,
+    testData.summary,
+    testData.entities,
+    testData.entityEmojis,
+    { templateType: 'creative_briefing' }
+  );
+  
+  if (result) {
+    console.log("✅ Notion Export Test erfolgreich!");
+    console.log("🔗 Page URL:", result);
+  } else {
+    console.log("❌ Notion Export Test fehlgeschlagen!");
+  }
 }
 
 module.exports = {
-	exportToNotion,
-	exportNote,
+  exportToNotion,
+  createCreativeDatabase,
+  testNotionExport
 };
