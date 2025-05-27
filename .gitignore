@@ -26,3 +26,8 @@ npm-debug.log*
 
 # Testing
 coverage/
+
+# Miro API Test Files (contain sensitive data)
+test-miro-*.js
+test-template-selection.js
+MIRO_API_STATUS.md
