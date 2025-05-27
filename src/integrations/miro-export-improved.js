@@ -1,4 +1,4 @@
-// miro-export-improved.js - Enhanced with template selection
+// miro-export-improved.js - Enhanced with creative agency templates
 const fs = require("fs");
 const path = require("path");
 const axios = require("axios");
@@ -7,6 +7,10 @@ const {
   identifyRelatedTerms,
   identifyEntitiesWithEmojis,
 } = require("../utils/entity-linker");
+const {
+  CREATIVE_MIRO_TEMPLATES,
+  creativeMiroSelector
+} = require("./miro-creative-templates");
 
 // Lade Miro-API-Konfiguration aus config.json
 let config = {};
@@ -75,14 +79,23 @@ const MIRO_TEMPLATES = {
 };
 
 /**
- * Ermittelt das beste Template basierend auf dem Inhalt
+ * Ermittelt das beste Template basierend auf dem Inhalt (mit Creative Agency Templates)
  * @param {string} transcript - Das Transkript
  * @param {string} summary - Die Zusammenfassung
+ * @param {object} options - Zusätzliche Optionen
  * @returns {object} - Das passende Template
  */
-function selectTemplate(transcript, summary) {
-  const content = (transcript + " " + summary).toLowerCase();
+function selectTemplate(transcript, summary, options = {}) {
+  // Prüfe zuerst die neuen Creative Agency Templates
+  const creativeTemplate = creativeMiroSelector.selectTemplate(transcript, summary, options);
   
+  if (creativeTemplate) {
+    console.log(`🎨 Creative Agency Template gewählt: ${creativeTemplate.name}`);
+    return creativeTemplate;
+  }
+  
+  // Fallback zu alten Templates
+  const content = (transcript + " " + summary).toLowerCase();
   let bestMatch = { template: MIRO_TEMPLATES.DEFAULT, score: 0 };
   
   for (const [key, template] of Object.entries(MIRO_TEMPLATES)) {
@@ -100,7 +113,7 @@ function selectTemplate(transcript, summary) {
     }
   }
   
-  console.log(`🎯 Template gewählt: ${bestMatch.template.name} (Score: ${bestMatch.score})`);
+  console.log(`🎯 Standard Template gewählt: ${bestMatch.template.name} (Score: ${bestMatch.score})`);
   return bestMatch.template;
 }
 
