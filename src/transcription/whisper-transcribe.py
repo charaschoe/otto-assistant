@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import sys
 import os
-import whisper
+from faster_whisper import WhisperModel
 import mimetypes
 
 def is_valid_audio_file(file_path):
@@ -35,20 +35,25 @@ def transcribe_audio(audio_file):
             
         # Lade das Whisper-Modell (kleineres Modell für schnellere Verarbeitung)
         try:
-            model = whisper.load_model("base")
+            model = WhisperModel("base", device="cpu", compute_type="int8")
         except Exception as e:
             print(f"Fehler beim Laden des Whisper-Modells: {str(e)}")
             sys.exit(4)
         
         # Transkribiere die Audiodatei
-        result = model.transcribe(audio_file, verbose=True, logprob_threshold=-1.0)
+        segments, info = model.transcribe(audio_file, beam_size=5)
+        
+        # Sammle alle Segmente zu einem vollständigen Text
+        transcript_text = ""
+        for segment in segments:
+            transcript_text += segment.text
         
         # Ausgabe des Transkripts mit Markern für die Extraktion
         print("📝 TRANSKRIPT_START")
-        print(result["text"])
+        print(transcript_text)
         print("📝 TRANSKRIPT_END")
         
-        return result["text"]
+        return transcript_text
     except Exception as e:
         print(f"Fehler bei der Transkription: {str(e)}")
         return ""

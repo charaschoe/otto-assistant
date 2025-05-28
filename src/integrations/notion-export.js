@@ -1,13 +1,11 @@
 /**
  * Notion Export Integration für Otto Assistant
- * Erweitert für Creative Agency Features
+ * Vereinfacht für maximale Kompatibilität
  */
 
 const fs = require("fs");
 const path = require("path");
 const axios = require("axios");
-const { notionCreativeSelector } = require("./notion-creative-templates");
-const { selectBestTemplate } = require("../utils/summary-templates");
 
 // Lade Notion-API-Konfiguration aus config.json
 let config = {};
@@ -22,15 +20,13 @@ const NOTION_API_BASE = "https://api.notion.com/v1";
 const NOTION_VERSION = "2022-06-28";
 
 /**
- * Exportiert Transkript und Zusammenfassung als Notion-Page
- * @param {string} transcript - Das Transkript
+ * Exportiert Zusammenfassung als Notion-Page
  * @param {string} summary - Die Zusammenfassung
- * @param {Array} entities - Extrahierte Entitäten
- * @param {object} entityEmojis - Entitäten mit Emojis
+ * @param {string} title - Der Titel
  * @param {object} options - Zusätzliche Optionen
  * @returns {Promise<string|null>} - Die URL der erstellten Page oder null
  */
-async function exportToNotion(transcript, summary, entities = [], entityEmojis = {}, options = {}) {
+async function exportToNotion(summary, title, options = {}) {
   const apiKey = config.NOTION_API_KEY || process.env.NOTION_API_KEY;
   const databaseId = config.NOTION_DATABASE_ID || process.env.NOTION_DATABASE_ID;
   
@@ -45,36 +41,21 @@ async function exportToNotion(transcript, summary, entities = [], entityEmojis =
   }
 
   try {
-    // 1. Template-Typ ermitteln
-    const templateType = options.templateType || selectBestTemplate(transcript);
-    console.log(`🎨 Notion Template-Typ: ${templateType}`);
+    // Minimale Properties für maximale Kompatibilität - nur Title Property
+    const properties = {
+      "Name": {
+        title: [{ type: "text", text: { content: title || "Otto Transkript" } }]
+      }
+    };
+
+    // Vereinfachter Content
+    const content = createNotionBlocks(summary || "Keine Zusammenfassung verfügbar.");
     
-    // 2. Template und Properties erstellen
-    const template = notionCreativeSelector.selectTemplate(transcript, summary, templateType);
-    const properties = notionCreativeSelector.createPageProperties(
-      template, 
-      transcript, 
-      summary, 
-      templateType, 
-      entities, 
-      entityEmojis
-    );
-    
-    // 3. Content erstellen
-    const templateData = notionCreativeSelector.extractTemplateData(
-      transcript, 
-      summary, 
-      templateType, 
-      entities, 
-      entityEmojis
-    );
-    const content = notionCreativeSelector.createPageContent(template, transcript, summary, templateData);
-    
-    // 4. Notion Page erstellen
+    // Notion Page erstellen
     const pageData = {
       parent: { database_id: databaseId },
       properties: properties,
-      children: createNotionBlocks(content)
+      children: content
     };
     
     const response = await axios.post(`${NOTION_API_BASE}/pages`, pageData, {
@@ -97,12 +78,23 @@ async function exportToNotion(transcript, summary, entities = [], entityEmojis =
 }
 
 /**
- * Erstellt Notion Blocks aus Markdown-Content
- * @param {string} content - Markdown-Content
+ * Erstellt Notion Blocks aus Text-Content
+ * @param {string} content - Text-Content
  * @returns {Array} - Array von Notion Blocks
  */
 function createNotionBlocks(content) {
   const blocks = [];
+  
+  if (!content || typeof content !== 'string') {
+    return [{
+      object: "block",
+      type: "paragraph",
+      paragraph: {
+        rich_text: [{ type: "text", text: { content: "Kein Inhalt verfügbar." } }]
+      }
+    }];
+  }
+
   const lines = content.split('\n');
   
   for (const line of lines) {
@@ -156,18 +148,6 @@ function createNotionBlocks(content) {
         }
       });
     }
-    // Code Blocks
-    else if (trimmedLine.startsWith('```')) {
-      // Handle code blocks (simplified)
-      blocks.push({
-        object: "block",
-        type: "code",
-        code: {
-          rich_text: [{ type: "text", text: { content: "Code Block" } }],
-          language: "javascript"
-        }
-      });
-    }
     // Dividers
     else if (trimmedLine === '---') {
       blocks.push({
@@ -178,91 +158,34 @@ function createNotionBlocks(content) {
     }
     // Regular paragraphs
     else {
-      // Skip empty lines and markdown formatting
-      if (trimmedLine && !trimmedLine.startsWith('**') && !trimmedLine.startsWith('*')) {
-        blocks.push({
-          object: "block",
-          type: "paragraph",
-          paragraph: {
-            rich_text: [{ type: "text", text: { content: trimmedLine } }]
-          }
-        });
-      }
+      blocks.push({
+        object: "block",
+        type: "paragraph",
+        paragraph: {
+          rich_text: [{ type: "text", text: { content: trimmedLine } }]
+        }
+      });
     }
   }
   
-  return blocks;
-}
-
-/**
- * Erstellt eine neue Notion Database für Creative Agency Templates
- * @param {string} templateType - Der Template-Typ
- * @returns {Promise<string|null>} - Die Database-ID oder null
- */
-async function createCreativeDatabase(templateType) {
-  const apiKey = config.NOTION_API_KEY || process.env.NOTION_API_KEY;
-  const parentPageId = config.NOTION_PARENT_PAGE_ID || process.env.NOTION_PARENT_PAGE_ID;
-  
-  if (!apiKey || !parentPageId) {
-    console.error("❌ Notion API-Key oder Parent Page-ID fehlt für Database-Erstellung.");
-    return null;
-  }
-  
-  try {
-    const template = notionCreativeSelector.selectTemplate('', '', templateType);
-    
-    const databaseData = {
-      parent: { page_id: parentPageId },
-      title: [{ type: "text", text: { content: template.name } }],
-      properties: {}
-    };
-    
-    // Properties vom Template übernehmen
-    Object.entries(template.properties).forEach(([key, config]) => {
-      databaseData.properties[key] = { [config.type]: config };
-    });
-    
-    const response = await axios.post(`${NOTION_API_BASE}/databases`, databaseData, {
-      headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "Notion-Version": NOTION_VERSION,
-        "Content-Type": "application/json"
-      }
-    });
-    
-    console.log(`✅ Notion Database erstellt: ${response.data.id}`);
-    return response.data.id;
-    
-  } catch (error) {
-    console.error("❌ Database-Erstellung fehlgeschlagen:", error.response?.data || error.message);
-    return null;
-  }
+  return blocks.length > 0 ? blocks : [{
+    object: "block",
+    type: "paragraph",
+    paragraph: {
+      rich_text: [{ type: "text", text: { content: content } }]
+    }
+  }];
 }
 
 /**
  * Test-Funktion für Notion Export
  */
 async function testNotionExport() {
-  const testData = {
-    transcript: `
-      Client: Mercedes-Benz
-      Projekt: EQS Kampagne 2025
-      Zielgruppe: Premium-Kunden, umweltbewusst
-      Botschaft: Luxus trifft Nachhaltigkeit
-      Team: Sarah (Creative Director), Max (Art Director)
-    `,
-    summary: "Creative Briefing für Mercedes EQS Elektro-Kampagne",
-    entities: ['Mercedes-Benz', 'EQS', 'Kampagne', 'Premium'],
-    entityEmojis: { 'Mercedes-Benz': '🚗', 'EQS': '⚡', 'Kampagne': '📢' }
-  };
-  
   console.log("🧪 Testing Notion Export...");
   const result = await exportToNotion(
-    testData.transcript,
-    testData.summary,
-    testData.entities,
-    testData.entityEmojis,
-    { templateType: 'creative_briefing' }
+    "Test-Zusammenfassung für Otto Assistant",
+    "Otto Test",
+    { templateType: 'standard' }
   );
   
   if (result) {
@@ -275,6 +198,5 @@ async function testNotionExport() {
 
 module.exports = {
   exportToNotion,
-  createCreativeDatabase,
   testNotionExport
 };

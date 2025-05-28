@@ -114,7 +114,15 @@ function detectTemplateType(text) {
  * @returns {string} - The populated template
  */
 function applyTemplate(template, transcript) {
-	return template.replace("{{transcript}}", transcript);
+if (!template || typeof template !== 'string') {
+console.warn('⚠️ Template ist ungültig, verwende Fallback');
+return `Bitte fasse den folgenden Text zusammen:\n\n${transcript}`;
+}
+if (!transcript || typeof transcript !== 'string') {
+console.warn('⚠️ Transcript ist ungültig');
+return template;
+}
+return template.replace("{{transcript}}", transcript);
 }
 
 /**
@@ -138,9 +146,9 @@ async function summarize(text, templateType = null) {
 		const type = templateType || detectTemplateType(text);
 		console.log(`🔍 Erkannter Vorlagentyp (für Kitegg): ${type}`);
 
-		// Wähle passende Vorlage aus und befülle sie
-		const templateToUse = templates[type] || templates.standard;
-		const promptContent = applyTemplate(templateToUse, text);
+        // Wähle passende Vorlage aus und befülle sie
+        const templateToUse = templates.templates[type] || templates.templates.standard;
+        const promptContent = applyTemplate(templateToUse, text);
 
 		console.log(
 			`🤖 Sende Anfrage an Kitegg API (${promptContent.length} Zeichen)...`

@@ -193,14 +193,16 @@ rl.question(
 );
 
 function transcribeAudio(audioFile) {
-	console.log("🧠 Starte Transkription...");
-	return new Promise((resolve, reject) => {
-		const whisperScript = path.join(
-			__dirname,
-			"transcription",
-			"whisper-transcribe.py"
-		);
-		const python = spawn("python3", [whisperScript, audioFile]);
+console.log("🧠 Starte Transkription...");
+return new Promise((resolve, reject) => {
+const whisperScript = path.join(
+__dirname,
+"transcription",
+"whisper-transcribe.py"
+);
+// Use the virtual environment's Python interpreter
+const venvPython = path.join(__dirname, "..", "venv", "bin", "python");
+const python = spawn(venvPython, [whisperScript, audioFile]);
 
 		let transcript = "";
 		let capture = false;
