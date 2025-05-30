@@ -81,11 +81,12 @@ function renderObsidianTemplate(template, templateData, transcript, summary) {
   // Template-Variablen ersetzen
   Object.entries(templateData).forEach(([key, value]) => {
     const placeholder = `{{${key}}}`;
-    content = content.replace(new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), value || 'TBD');
+    const replacement = value && value !== '' ? value : 'TBD';
+    content = content.replace(new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), replacement);
   });
   
   // Spezielle Variablen
-  content = content.replace(/{{transcript}}/g, transcript);
+  content = content.replace(/{{transcript}}/g, transcript || '');
   content = content.replace(/{{summary}}/g, summary || '');
   content = content.replace(/{{created_at}}/g, new Date().toLocaleString('de-DE'));
   
@@ -98,12 +99,18 @@ function renderObsidianTemplate(template, templateData, transcript, summary) {
   });
   
   // Entity Emojis Loop (vereinfacht)
-  if (templateData.entityEmojis) {
+  if (templateData.entityEmojis && Object.keys(templateData.entityEmojis).length > 0) {
     const entityList = Object.entries(templateData.entityEmojis)
       .map(([entity, emoji]) => `- ${emoji} [[${entity}]]`)
       .join('\n');
     content = content.replace(/{{#each entityEmojis}}[\s\S]*?{{\/each}}/g, entityList);
+  } else {
+    // Entferne den Loop-Block wenn keine Entitäten vorhanden sind
+    content = content.replace(/{{#each entityEmojis}}[\s\S]*?{{\/each}}/g, '');
   }
+  
+  // Entferne alle übrigen unersetzten Platzhalter
+  content = content.replace(/\{\{[^}]+\}\}/g, 'TBD');
   
   return content;
 }

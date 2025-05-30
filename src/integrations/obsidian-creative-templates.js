@@ -813,6 +813,30 @@ const obsidianCreativeSelector = {
     return text.toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-+|-+$/g, '');
+  },
+
+  findInText(text, keywords) {
+    for (const keyword of keywords) {
+      if (text.toLowerCase().includes(keyword.toLowerCase())) {
+        return keyword;
+      }
+    }
+    return null;
+  },
+
+  extractDeliverables(content) {
+    const deliverables = this.extractSentences(content, ['spot', 'anzeige', 'video', 'print', 'digital', 'campaign', 'website']);
+    return deliverables.length > 0 ? deliverables.slice(0, 3).join(', ') : 'TBD';
+  },
+
+  extractTimeline(content) {
+    const timeline = this.extractSentences(content, ['märz', 'april', 'mai', 'juni', 'januar', 'februar', '2025', '2024', 'launch']);
+    return timeline.length > 0 ? timeline[0] : 'TBD';
+  },
+
+  extractInspiration(content) {
+    const inspiration = this.extractSentences(content, ['apple', 'tesla', 'inspiration', 'referenz', 'beispiel', 'campaign']);
+    return inspiration.length > 0 ? inspiration.slice(0, 2).join(', ') : 'TBD';
   }
 };
 
