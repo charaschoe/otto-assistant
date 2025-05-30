@@ -1,0 +1,165 @@
+#!/usr/bin/env node
+
+/**
+ * Otto Assistant Live Mode - Primary Executable
+ * Modern entry point for live audio processing with real-time board updates
+ */
+
+const path = require('path');
+const { OttoLiveSimple } = require('../src/live/otto-live-simple');
+const { setupEnvironment } = require('../src/utils/environment-setup');
+const { SystemCheck } = require('../src/utils/system-check');
+
+const chalk = require('chalk');
+
+// CLI Arguments parsing
+const args = process.argv.slice(2);
+const flags = {
+  help: args.includes('--help') || args.includes('-h'),
+  version: args.includes('--version') || args.includes('-v'),
+  debug: args.includes('--debug') || args.includes('-d'),
+  simulation: args.includes('--simulation') || args.includes('-s'),
+  noMiro: args.includes('--no-miro'),
+  noNotion: args.includes('--no-notion'),
+  noObsidian: args.includes('--no-obsidian'),
+  quiet: args.includes('--quiet') || args.includes('-q'),
+  configPath: getArgValue('--config') || getArgValue('-c')
+};
+
+function getArgValue(flag) {
+  const index = args.indexOf(flag);
+  return index !== -1 && args[index + 1] ? args[index + 1] : null;
+}
+
+function showVersion() {
+  const packageJson = require('../package.json');
+  console.log(`${chalk.blue('Otto Assistant')} v${packageJson.version}`);
+  console.log(`Live Mode: ${chalk.green('Active')}`);
+  console.log(`Node.js: ${process.version}`);
+  console.log(`Platform: ${process.platform} ${process.arch}`);
+}
+
+function showHelp() {
+  console.log(`
+${chalk.blue.bold('🤖 Otto Assistant Live Mode')}
+
+${chalk.yellow('USAGE:')}
+  ${chalk.green('otto-live')} [options]
+
+${chalk.yellow('OPTIONS:')}
+  ${chalk.green('-h, --help')}           Show this help message
+  ${chalk.green('-v, --version')}        Show version information  
+  ${chalk.green('-d, --debug')}          Enable debug mode with verbose logging
+  ${chalk.green('-s, --simulation')}     Run in simulation mode (no real audio)
+  ${chalk.green('-q, --quiet')}          Reduce output verbosity
+  ${chalk.green('-c, --config')} PATH    Use custom config file
+  ${chalk.green('--no-miro')}            Disable Miro integration
+  ${chalk.green('--no-notion')}          Disable Notion integration  
+  ${chalk.green('--no-obsidian')}        Disable Obsidian integration
+
+${chalk.yellow('EXAMPLES:')}
+  ${chalk.green('otto-live')}                    # Start live mode with all integrations
+  ${chalk.green('otto-live --simulation')}       # Test mode with simulated audio
+  ${chalk.green('otto-live --no-miro --debug')}  # Live mode without Miro, debug on
+  ${chalk.green('otto-live --config ./my.json')} # Use custom configuration
+
+${chalk.yellow('VOICE COMMANDS:')}
+  ${chalk.blue('"Export to Miro"')}       - Create optimized Miro board
+  ${chalk.blue('"Export now"')}           - Export to all enabled platforms
+  ${chalk.blue('"Summary"')}              - Generate live content summary
+  ${chalk.blue('"Meeting ende"')}         - Stop session and finalize exports
+
+${chalk.yellow('REQUIREMENTS:')}
+  • SoX audio tools (${chalk.cyan('brew install sox')})
+  • Node.js 16+ 
+  • Microphone access permissions
+  • API keys in config.json (optional)
+
+${chalk.yellow('DOCUMENTATION:')}
+  ${chalk.cyan('https://github.com/your-org/otto-assistant#live-mode')}
+`);
+}
+
+async function runSystemCheck() {
+  if (!flags.quiet) {
+    console.log(chalk.blue('🔍 Running system compatibility check...\n'));
+  }
+  
+  const checker = new SystemCheck({ verbose: flags.debug });
+  const results = await checker.runFullCheck();
+  
+  if (!results.allPassed) {
+    console.error(chalk.red('❌ System check failed. Please resolve the issues above.'));
+    process.exit(1);
+  }
+  
+  if (!flags.quiet) {
+    console.log(chalk.green('✅ System check passed. Ready for live mode.\n'));
+  }
+}
+
+async function main() {
+  try {
+    // Handle CLI flags
+    if (flags.help) {
+      showHelp();
+      return;
+    }
+    
+    if (flags.version) {
+      showVersion();
+      return;
+    }
+    
+    // Setup environment
+    await setupEnvironment({
+      configPath: flags.configPath,
+      debug: flags.debug,
+      quiet: flags.quiet
+    });
+    
+    // Run system check
+    await runSystemCheck();
+    
+    // Initialize Otto Live
+    const ottoLive = new OttoLiveSimple({
+      enableSimulation: flags.simulation,
+      enableMiroUpdates: !flags.noMiro,
+      enableNotionUpdates: !flags.noNotion,
+      enableObsidianUpdates: !flags.noObsidian,
+      debugMode: flags.debug,
+      quietMode: flags.quiet
+    });
+    
+    // Setup graceful shutdown
+    process.on('SIGINT', async () => {
+      console.log(chalk.yellow('\n🛑 Gracefully shutting down Otto Live Mode...'));
+      await ottoLive.stop();
+      console.log(chalk.green('✅ Otto Assistant stopped successfully.'));
+      process.exit(0);
+    });
+    
+    process.on('SIGTERM', async () => {
+      await ottoLive.stop();
+      process.exit(0);
+    });
+    
+    // Start live mode
+    console.log(chalk.blue.bold('🚀 Starting Otto Assistant Live Mode...\n'));
+    await ottoLive.start();
+    
+  } catch (error) {
+    console.error(chalk.red('💥 Fatal error:'), error.message);
+    if (flags.debug) {
+      console.error(error.stack);
+    }
+    process.exit(1);
+  }
+}
+
+// Run main function
+if (require.main === module) {
+  main();
+}
+
+module.exports = { main };

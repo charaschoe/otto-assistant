@@ -1,0 +1,310 @@
+#!/usr/bin/env node
+
+/**
+ * Otto Assistant Export Tool - Batch Export Utility
+ * Export content to multiple platforms with advanced options
+ */
+
+const path = require('path');
+const { MiroExportOptimized } = require('../src/integrations/miro-export-optimized');
+const { ObsidianExport } = require('../src/integrations/obsidian-export');
+const { NotionExport } = require('../src/integrations/notion-export');
+const { ContentProcessor } = require('../src/utils/content-processor');
+const chalk = require('chalk');
+const fs = require('fs');
+
+const args = process.argv.slice(2);
+const flags = {
+  help: args.includes('--help') || args.includes('-h'),
+  input: getArgValue('--input') || getArgValue('-i'),
+  output: getArgValue('--output') || getArgValue('-o'),
+  format: getArgValue('--format') || 'all',
+  template: getArgValue('--template') || getArgValue('-t'),
+  miro: args.includes('--miro'),
+  notion: args.includes('--notion'),
+  obsidian: args.includes('--obsidian'),
+  all: args.includes('--all') || (!args.includes('--miro') && !args.includes('--notion') && !args.includes('--obsidian')),
+  watch: args.includes('--watch') || args.includes('-w'),
+  verbose: args.includes('--verbose') || args.includes('-v'),
+  dry: args.includes('--dry-run'),
+  optimize: args.includes('--optimize'),
+  batch: getArgValue('--batch')
+};
+
+function getArgValue(flag) {
+  const index = args.indexOf(flag);
+  return index !== -1 && args[index + 1] ? args[index + 1] : null;
+}
+
+function showHelp() {
+  console.log(`
+${chalk.blue.bold('📤 Otto Assistant Export Tool')}
+
+${chalk.yellow('USAGE:')}
+  ${chalk.green('otto-export')} [options]
+
+${chalk.yellow('OPTIONS:')}
+  ${chalk.green('-h, --help')}              Show this help message
+  ${chalk.green('-i, --input')} FILE/DIR    Input file or directory to export
+  ${chalk.green('-o, --output')} DIR        Output directory for exports
+  ${chalk.green('-t, --template')} NAME     Use specific export template
+  ${chalk.green('--format')} TYPE           Export format (creative|meeting|notes)
+  ${chalk.green('-v, --verbose')}           Enable verbose output
+  ${chalk.green('-w, --watch')}             Watch input for changes and auto-export
+  ${chalk.green('--dry-run')}               Preview export without creating files
+  ${chalk.green('--optimize')}              Apply advanced content optimization
+  ${chalk.green('--batch')} DIR             Process all files in directory
+
+${chalk.yellow('PLATFORMS:')}
+  ${chalk.green('--miro')}                  Export to Miro boards only
+  ${chalk.green('--notion')}                Export to Notion pages only  
+  ${chalk.green('--obsidian')}              Export to Obsidian vault only
+  ${chalk.green('--all')}                   Export to all platforms (default)
+
+${chalk.yellow('TEMPLATES:')}
+  ${chalk.cyan('creative-brief')}           Creative campaign briefing template
+  ${chalk.cyan('meeting-notes')}            Meeting documentation template
+  ${chalk.cyan('project-summary')}          Project overview template
+  ${chalk.cyan('research-report')}          Research and analysis template
+
+${chalk.yellow('EXAMPLES:')}
+  ${chalk.green('otto-export --input session.md --all')}
+  ${chalk.green('otto-export --batch ./recordings --miro --template creative-brief')}
+  ${chalk.green('otto-export --input ./notes --watch --optimize')}
+  ${chalk.green('otto-export --dry-run --verbose --template meeting-notes')}
+
+${chalk.yellow('INPUT FORMATS:')}
+  • Markdown files (.md)
+  • Audio transcriptions (.txt)
+  • JSON session data (.json)
+  • Live session directories
+`);
+}
+
+async function processExport() {
+  console.log(chalk.blue.bold('📤 Otto Export Tool\n'));
+  
+  // Validate inputs
+  if (!flags.input && !flags.batch) {
+    console.error(chalk.red('❌ Error: --input or --batch is required'));
+    process.exit(1);
+  }
+  
+  const inputs = await getInputFiles();
+  if (inputs.length === 0) {
+    console.error(chalk.red('❌ No valid input files found'));
+    process.exit(1);
+  }
+  
+  console.log(chalk.cyan(`📁 Processing ${inputs.length} input file(s)...`));
+  
+  const results = {
+    processed: 0,
+    successful: 0,
+    failed: 0,
+    exports: []
+  };
+  
+  for (const inputFile of inputs) {
+    try {
+      console.log(chalk.blue(`\n🔄 Processing: ${path.basename(inputFile)}`));
+      results.processed++;
+      
+      // Process content
+      const processor = new ContentProcessor({
+        template: flags.template,
+        format: flags.format,
+        optimize: flags.optimize,
+        verbose: flags.verbose
+      });
+      
+      const processedContent = await processor.processFile(inputFile);
+      
+      if (flags.dry) {
+        console.log(chalk.yellow('🔍 DRY RUN - Preview:'));
+        console.log(processedContent.preview);
+        continue;
+      }
+      
+      // Export to platforms
+      const exportResults = await exportToPlatforms(processedContent);
+      results.exports.push(...exportResults);
+      
+      results.successful++;
+      console.log(chalk.green(`✅ Successfully processed: ${path.basename(inputFile)}`));
+      
+    } catch (error) {
+      results.failed++;
+      console.error(chalk.red(`❌ Failed to process: ${path.basename(inputFile)}`));
+      if (flags.verbose) {
+        console.error(error.message);
+      }
+    }
+  }
+  
+  // Summary
+  printExportSummary(results);
+  
+  // Watch mode
+  if (flags.watch && !flags.dry) {
+    console.log(chalk.cyan('\n👀 Watching for changes... (Press Ctrl+C to stop)'));
+    await watchForChanges(inputs);
+  }
+}
+
+async function getInputFiles() {
+  const inputs = [];
+  
+  if (flags.batch) {
+    // Process entire directory
+    const files = fs.readdirSync(flags.batch, { withFileTypes: true });
+    for (const file of files) {
+      if (file.isFile() && isValidInputFile(file.name)) {
+        inputs.push(path.join(flags.batch, file.name));
+      }
+    }
+  } else if (flags.input) {
+    // Single file or directory
+    const stat = fs.statSync(flags.input);
+    if (stat.isFile() && isValidInputFile(flags.input)) {
+      inputs.push(flags.input);
+    } else if (stat.isDirectory()) {
+      const files = fs.readdirSync(flags.input);
+      for (const file of files) {
+        if (isValidInputFile(file)) {
+          inputs.push(path.join(flags.input, file));
+        }
+      }
+    }
+  }
+  
+  return inputs;
+}
+
+function isValidInputFile(filename) {
+  const validExtensions = ['.md', '.txt', '.json'];
+  return validExtensions.some(ext => filename.endsWith(ext));
+}
+
+async function exportToPlatforms(content) {
+  const results = [];
+  
+  try {
+    // Miro export
+    if (flags.miro || flags.all) {
+      console.log(chalk.cyan('  🎨 Exporting to Miro...'));
+      const miroExporter = new MiroExportOptimized();
+      const miroResult = await miroExporter.export(content);
+      results.push({ platform: 'Miro', ...miroResult });
+      console.log(chalk.green('  ✅ Miro export completed'));
+    }
+    
+    // Notion export
+    if (flags.notion || flags.all) {
+      console.log(chalk.cyan('  📊 Exporting to Notion...'));
+      const notionExporter = new NotionExport();
+      const notionResult = await notionExporter.export(content);
+      results.push({ platform: 'Notion', ...notionResult });
+      console.log(chalk.green('  ✅ Notion export completed'));
+    }
+    
+    // Obsidian export
+    if (flags.obsidian || flags.all) {
+      console.log(chalk.cyan('  📝 Exporting to Obsidian...'));
+      const obsidianExporter = new ObsidianExport();
+      const obsidianResult = await obsidianExporter.export(content);
+      results.push({ platform: 'Obsidian', ...obsidianResult });
+      console.log(chalk.green('  ✅ Obsidian export completed'));
+    }
+    
+  } catch (error) {
+    console.error(chalk.red('  ❌ Export failed:'), error.message);
+    throw error;
+  }
+  
+  return results;
+}
+
+function printExportSummary(results) {
+  console.log(chalk.blue.bold('\n📊 EXPORT SUMMARY'));
+  console.log('─'.repeat(50));
+  console.log(`Files processed: ${results.processed}`);
+  console.log(`${chalk.green('Successful:')} ${results.successful}`);
+  console.log(`${chalk.red('Failed:')} ${results.failed}`);
+  
+  if (results.exports.length > 0) {
+    console.log(chalk.blue.bold('\n📤 EXPORTS CREATED:'));
+    results.exports.forEach((exp, i) => {
+      const status = exp.success ? chalk.green('✅') : chalk.red('❌');
+      console.log(`${i + 1}. ${status} ${exp.platform}: ${exp.url || exp.file || 'Local file'}`);
+    });
+  }
+  
+  console.log('─'.repeat(50));
+  
+  if (results.failed === 0) {
+    console.log(chalk.green.bold('🎉 All exports completed successfully!'));
+  } else {
+    console.log(chalk.yellow.bold('⚠️ Some exports failed. Use --verbose for details.'));
+  }
+}
+
+async function watchForChanges(files) {
+  const chokidar = require('chokidar');
+  
+  const watcher = chokidar.watch(files, {
+    ignored: /(^|[\/\\])\../,
+    persistent: true
+  });
+  
+  watcher.on('change', async (filepath) => {
+    console.log(chalk.yellow(`\n🔄 File changed: ${path.basename(filepath)}`));
+    console.log(chalk.cyan('Re-exporting...'));
+    
+    try {
+      const processor = new ContentProcessor({
+        template: flags.template,
+        format: flags.format,
+        optimize: flags.optimize,
+        verbose: false
+      });
+      
+      const processedContent = await processor.processFile(filepath);
+      await exportToPlatforms(processedContent);
+      
+      console.log(chalk.green('✅ Re-export completed'));
+    } catch (error) {
+      console.error(chalk.red('❌ Re-export failed:'), error.message);
+    }
+  });
+  
+  // Keep process alive
+  process.on('SIGINT', () => {
+    console.log(chalk.yellow('\n👋 Stopping file watcher...'));
+    watcher.close();
+    process.exit(0);
+  });
+}
+
+async function main() {
+  if (flags.help) {
+    showHelp();
+    return;
+  }
+  
+  try {
+    await processExport();
+  } catch (error) {
+    console.error(chalk.red('💥 Export tool error:'), error.message);
+    if (flags.verbose) {
+      console.error(error.stack);
+    }
+    process.exit(1);
+  }
+}
+
+if (require.main === module) {
+  main();
+}
+
+module.exports = { main, processExport };

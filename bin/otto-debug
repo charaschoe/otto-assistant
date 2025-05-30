@@ -1,0 +1,297 @@
+#!/usr/bin/env node
+
+/**
+ * Otto Assistant Debug Tool - System Diagnostics
+ * Comprehensive system check and troubleshooting utility
+ */
+
+const { SystemCheck } = require('../src/utils/system-check');
+const { AudioDiagnostics } = require('../src/utils/audio-diagnostics');
+const { APITester } = require('../src/utils/api-tester');
+const chalk = require('chalk');
+
+const args = process.argv.slice(2);
+const flags = {
+  help: args.includes('--help') || args.includes('-h'),
+  verbose: args.includes('--verbose') || args.includes('-v'),
+  audio: args.includes('--audio') || args.includes('-a'),
+  api: args.includes('--api'),
+  fix: args.includes('--fix'),
+  export: args.includes('--export'),
+  quick: args.includes('--quick') || args.includes('-q')
+};
+
+function showHelp() {
+  console.log(`
+${chalk.blue.bold('🔧 Otto Assistant Debug Tool')}
+
+${chalk.yellow('USAGE:')}
+  ${chalk.green('otto-debug')} [options]
+
+${chalk.yellow('OPTIONS:')}
+  ${chalk.green('-h, --help')}      Show this help message
+  ${chalk.green('-v, --verbose')}   Enable verbose diagnostic output
+  ${chalk.green('-a, --audio')}     Run extended audio system tests
+  ${chalk.green('--api')}           Test all API integrations
+  ${chalk.green('--fix')}           Attempt automatic fixes for common issues
+  ${chalk.green('--export')}        Generate diagnostic report file
+  ${chalk.green('-q, --quick')}     Run quick system check only
+
+${chalk.yellow('EXAMPLES:')}
+  ${chalk.green('otto-debug')}           # Full system diagnostics
+  ${chalk.green('otto-debug --audio')}   # Focus on audio issues
+  ${chalk.green('otto-debug --api')}     # Test API connectivity
+  ${chalk.green('otto-debug --fix')}     # Run diagnostics and auto-fix
+
+${chalk.yellow('TESTS PERFORMED:')}
+  • Node.js and npm versions
+  • Required dependencies installation
+  • SoX audio tools availability  
+  • Core Audio drivers (macOS)
+  • Microphone permissions and access
+  • API keys and connectivity
+  • File system permissions
+  • Memory and performance
+`);
+}
+
+async function runDiagnostics() {
+  console.log(chalk.blue.bold('🔍 Otto Assistant System Diagnostics\n'));
+  
+  const results = {
+    system: null,
+    audio: null,
+    api: null,
+    issues: [],
+    fixes: []
+  };
+  
+  try {
+    // System check
+    console.log(chalk.cyan('📋 Running system compatibility check...'));
+    const systemCheck = new SystemCheck({ verbose: flags.verbose });
+    results.system = await systemCheck.runFullCheck();
+    
+    if (results.system.allPassed) {
+      console.log(chalk.green('✅ System check passed\n'));
+    } else {
+      console.log(chalk.red('❌ System check failed\n'));
+      results.issues.push(...results.system.issues);
+    }
+    
+    // Audio diagnostics
+    if (flags.audio || !flags.quick) {
+      console.log(chalk.cyan('🎤 Running audio system diagnostics...'));
+      const audioDiag = new AudioDiagnostics({ verbose: flags.verbose });
+      results.audio = await audioDiag.runFullDiagnostics();
+      
+      if (results.audio.allPassed) {
+        console.log(chalk.green('✅ Audio diagnostics passed\n'));
+      } else {
+        console.log(chalk.red('❌ Audio issues detected\n'));
+        results.issues.push(...results.audio.issues);
+      }
+    }
+    
+    // API testing
+    if (flags.api || !flags.quick) {
+      console.log(chalk.cyan('🌐 Testing API integrations...'));
+      const apiTester = new APITester({ verbose: flags.verbose });
+      results.api = await apiTester.testAllAPIs();
+      
+      if (results.api.allPassed) {
+        console.log(chalk.green('✅ API tests passed\n'));
+      } else {
+        console.log(chalk.yellow('⚠️ Some API issues detected\n'));
+        results.issues.push(...results.api.issues);
+      }
+    }
+    
+    // Auto-fix
+    if (flags.fix && results.issues.length > 0) {
+      console.log(chalk.cyan('🔧 Attempting automatic fixes...'));
+      const fixes = await attemptAutoFix(results.issues);
+      results.fixes = fixes;
+      
+      console.log(chalk.green(`✅ Applied ${fixes.length} automatic fixes\n`));
+    }
+    
+    // Summary
+    printSummary(results);
+    
+    // Export report
+    if (flags.export) {
+      await exportDiagnosticReport(results);
+    }
+    
+    // Exit with appropriate code
+    process.exit(results.issues.length > 0 ? 1 : 0);
+    
+  } catch (error) {
+    console.error(chalk.red('💥 Diagnostic error:'), error.message);
+    if (flags.verbose) {
+      console.error(error.stack);
+    }
+    process.exit(1);
+  }
+}
+
+async function attemptAutoFix(issues) {
+  const fixes = [];
+  
+  for (const issue of issues) {
+    try {
+      switch (issue.type) {
+        case 'missing_dependency':
+          // Auto-install missing npm packages
+          console.log(chalk.yellow(`🔧 Installing ${issue.package}...`));
+          await execAsync(`npm install ${issue.package}`);
+          fixes.push(`Installed ${issue.package}`);
+          break;
+          
+        case 'permissions':
+          // Fix file permissions
+          console.log(chalk.yellow('🔧 Fixing file permissions...'));
+          await execAsync('chmod +x bin/*');
+          fixes.push('Fixed executable permissions');
+          break;
+          
+        case 'config_missing':
+          // Create default config
+          console.log(chalk.yellow('🔧 Creating default config...'));
+          await createDefaultConfig();
+          fixes.push('Created default configuration');
+          break;
+          
+        default:
+          console.log(chalk.gray(`ℹ️ Cannot auto-fix: ${issue.message}`));
+      }
+    } catch (error) {
+      console.log(chalk.red(`❌ Failed to fix: ${issue.message}`));
+    }
+  }
+  
+  return fixes;
+}
+
+function printSummary(results) {
+  console.log(chalk.blue.bold('📊 DIAGNOSTIC SUMMARY'));
+  console.log('─'.repeat(50));
+  
+  // System status
+  if (results.system) {
+    const status = results.system.allPassed ? 
+      chalk.green('✅ PASSED') : chalk.red('❌ FAILED');
+    console.log(`System Check: ${status}`);
+  }
+  
+  // Audio status  
+  if (results.audio) {
+    const status = results.audio.allPassed ? 
+      chalk.green('✅ PASSED') : chalk.red('❌ FAILED');
+    console.log(`Audio System: ${status}`);
+  }
+  
+  // API status
+  if (results.api) {
+    const status = results.api.allPassed ? 
+      chalk.green('✅ PASSED') : chalk.yellow('⚠️ PARTIAL');
+    console.log(`API Integration: ${status}`);
+  }
+  
+  console.log('─'.repeat(50));
+  
+  // Issues
+  if (results.issues.length > 0) {
+    console.log(chalk.red.bold('\n🚨 ISSUES FOUND:'));
+    results.issues.forEach((issue, i) => {
+      console.log(`${i + 1}. ${chalk.red(issue.message)}`);
+      if (issue.solution) {
+        console.log(`   ${chalk.cyan('Solution:')} ${issue.solution}`);
+      }
+    });
+  }
+  
+  // Fixes applied
+  if (results.fixes.length > 0) {
+    console.log(chalk.green.bold('\n🔧 FIXES APPLIED:'));
+    results.fixes.forEach((fix, i) => {
+      console.log(`${i + 1}. ${chalk.green(fix)}`);
+    });
+  }
+  
+  // Recommendations
+  if (results.issues.length === 0) {
+    console.log(chalk.green.bold('\n🎉 All systems operational! Otto is ready for live mode.'));
+  } else {
+    console.log(chalk.yellow.bold('\n💡 RECOMMENDATIONS:'));
+    console.log('• Run with --fix to attempt automatic repairs');
+    console.log('• Check the documentation for manual solutions');
+    console.log('• Use --verbose for detailed error information');
+  }
+}
+
+async function exportDiagnosticReport(results) {
+  const reportPath = `diagnostic-report-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.json`;
+  
+  const report = {
+    timestamp: new Date().toISOString(),
+    system: {
+      platform: process.platform,
+      arch: process.arch,
+      nodeVersion: process.version,
+      memoryUsage: process.memoryUsage()
+    },
+    results,
+    environment: process.env
+  };
+  
+  const fs = require('fs');
+  fs.writeFileSync(reportPath, JSON.stringify(report, null, 2));
+  
+  console.log(chalk.blue(`📄 Diagnostic report exported: ${reportPath}`));
+}
+
+async function createDefaultConfig() {
+  const fs = require('fs');
+  const defaultConfig = {
+    "MIRO_API_KEY": "",
+    "MIRO_TEAM_ID": "",
+    "NOTION_API_KEY": "",
+    "NOTION_DATABASE_ID": "",
+    "OPENAI_API_KEY": "",
+    "audio": {
+      "sampleRate": 16000,
+      "channels": 1,
+      "chunkDuration": 3000
+    },
+    "live": {
+      "updateInterval": 2000,
+      "batchSize": 3,
+      "enableSimulation": false
+    }
+  };
+  
+  fs.writeFileSync('config.json', JSON.stringify(defaultConfig, null, 2));
+}
+
+function execAsync(command) {
+  const { exec } = require('child_process');
+  const { promisify } = require('util');
+  return promisify(exec)(command);
+}
+
+async function main() {
+  if (flags.help) {
+    showHelp();
+    return;
+  }
+  
+  await runDiagnostics();
+}
+
+if (require.main === module) {
+  main();
+}
+
+module.exports = { main };
