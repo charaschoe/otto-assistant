@@ -332,59 +332,55 @@ class SimpleLiveRecorder extends EventEmitter {
     try {
       console.log(`🔄 Transcribing chunk ${chunkNumber} with faster-whisper...`);
       
-      // Create a simple Python script to use faster-whisper
-      const pythonScript = `
-import sys
-from faster_whisper import WhisperModel
-
-model = WhisperModel("base", device="cpu", compute_type="int8")
-segments, info = model.transcribe("${audioFilePath}", language="de")
-
-text = ""
-for segment in segments:
-    text += segment.text + " "
-
-print(text.strip())
-`;
-
-      const fs = require('fs');
-      const scriptPath = `${this.tempDir}/transcribe_${chunkNumber}.py`;
-      fs.writeFileSync(scriptPath, pythonScript);
-
-      const whisperProcess = spawn('python', [scriptPath]);
+      // Use our proper whisper-transcribe.py script
+      const { spawn } = require('child_process');
+      const pythonScript = path.join(__dirname, '../transcription/whisper-transcribe.py');
+      
+      const whisperProcess = spawn('python3', [pythonScript, audioFilePath]);
       
       let transcriptionText = '';
+      let errorText = '';
       
       whisperProcess.stdout.on('data', (data) => {
         transcriptionText += data.toString();
       });
 
+      whisperProcess.stderr.on('data', (data) => {
+        errorText += data.toString();
+      });
+
       whisperProcess.on('close', (code) => {
-        // Cleanup script file
-        const fs = require('fs');
-        const scriptPath = `${this.tempDir}/transcribe_${chunkNumber}.py`;
-        if (fs.existsSync(scriptPath)) {
-          fs.unlinkSync(scriptPath);
-        }
-        
         if (code === 0) {
-          const cleanText = transcriptionText.trim();
+          // Parse the output using our standard format
+          const lines = transcriptionText.split('\n');
+          const startIndex = lines.findIndex(line => line.includes('TRANSKRIPT_START'));
+          const endIndex = lines.findIndex(line => line.includes('TRANSKRIPT_END'));
           
-          if (cleanText && cleanText.length > 0 && this.isValidTranscription(cleanText)) {
-            console.log(`🗣️ faster-whisper [Chunk ${chunkNumber}]: "${cleanText}"`);
+          if (startIndex !== -1 && endIndex !== -1 && endIndex > startIndex) {
+            const transcriptLines = lines.slice(startIndex + 1, endIndex);
+            const cleanText = transcriptLines.join(' ').trim();
             
-            this.emit('transcription', {
-              text: cleanText,
-              timestamp: Date.now(),
-              confidence: this.estimateConfidence(cleanText),
-              isSimulated: false,
-              chunkNumber: chunkNumber
-            });
+            if (cleanText && cleanText.length > 0 && this.isValidTranscription(cleanText)) {
+              console.log(`🗣️ faster-whisper [Chunk ${chunkNumber}]: "${cleanText}"`);
+              
+              this.emit('transcription', {
+                text: cleanText,
+                timestamp: Date.now(),
+                confidence: this.estimateConfidence(cleanText),
+                isSimulated: false,
+                chunkNumber: chunkNumber
+              });
+            } else {
+              console.log(`🔇 No valid speech detected in chunk ${chunkNumber}`);
+            }
           } else {
-            console.log(`🔇 No valid speech detected in chunk ${chunkNumber}`);
+            console.log(`⚠️ Invalid Whisper output format for chunk ${chunkNumber}`);
           }
         } else {
           console.warn(`⚠️ faster-whisper process exited with code ${code} for chunk ${chunkNumber}`);
+          if (errorText) {
+            console.warn(`⚠️ Error output: ${errorText}`);
+          }
         }
         
         // Cleanup audio file
@@ -395,13 +391,6 @@ print(text.strip())
 
       whisperProcess.on('error', (error) => {
         console.error(`❌ faster-whisper transcription error for chunk ${chunkNumber}:`, error);
-        
-        // Cleanup script file on error
-        const fs = require('fs');
-        const scriptPath = `${this.tempDir}/transcribe_${chunkNumber}.py`;
-        if (fs.existsSync(scriptPath)) {
-          fs.unlinkSync(scriptPath);
-        }
       });
 
     } catch (error) {

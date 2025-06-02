@@ -58,6 +58,7 @@ class RealTimeUpdater {
       
       this.platforms.notion = {
         apiKey: config.NOTION_API_KEY,
+        databaseId: config.NOTION_DATABASE_ID,
         baseUrl: 'https://api.notion.com/v1'
       };
       
@@ -669,50 +670,89 @@ Use this content to manually create a Miro board if API access is unavailable.
   }
 
   /**
-   * Create live Notion page
+   * Create live Notion page - using EXACT same method as working notion-export.js
    */
   async createLiveNotionPage(sessionName) {
-    const pageData = {
-      parent: { type: "database_id", database_id: process.env.NOTION_DATABASE_ID || "default" },
-      properties: {
-        Name: {
-          title: [{ text: { content: sessionName } }]
-        },
-        Status: {
-          select: { name: "Live" }
+    const apiKey = this.platforms.notion.apiKey;
+    const databaseId = this.platforms.notion.databaseId;
+    
+    if (!apiKey) {
+      throw new Error('Notion API-Key fehlt.');
+    }
+    
+    if (!databaseId) {
+      throw new Error('Notion Database-ID fehlt.');
+    }
+
+    try {
+      // Use EXACT same structure as working notion-export.js
+      const properties = {
+        "Name": {
+          title: [{ type: "text", text: { content: sessionName || "Otto Live Session" } }]
         }
-      },
-      children: [
+      };
+
+      // Create live content blocks
+      const content = [
         {
           object: "block",
           type: "heading_1",
           heading_1: {
-            rich_text: [{ text: { content: "Live Session" } }]
+            rich_text: [{ type: "text", text: { content: "🎤 Live Session" } }]
           }
         },
         {
-          object: "block", 
+          object: "block",
           type: "paragraph",
           paragraph: {
-            rich_text: [{ text: { content: "Content appears here as you speak..." } }]
+            rich_text: [{ type: "text", text: { content: "Content appears here as you speak..." } }]
+          }
+        },
+        {
+          object: "block",
+          type: "heading_2",
+          heading_2: {
+            rich_text: [{ type: "text", text: { content: "Live Transcription" } }]
+          }
+        },
+        {
+          object: "block",
+          type: "paragraph",
+          paragraph: {
+            rich_text: [{ type: "text", text: { content: "Spoken content will appear here..." } }]
           }
         }
-      ]
-    };
-    
-    const response = await axios.post(
-      `${this.platforms.notion.baseUrl}/pages`,
-      pageData,
-      {
+      ];
+      
+      // Notion Page erstellen - EXACT same as working code
+      const pageData = {
+        parent: { database_id: databaseId },
+        properties: properties,
+        children: content
+      };
+      
+      console.log('📝 Creating Notion page in database:', databaseId);
+      
+      const response = await axios.post(`https://api.notion.com/v1/pages`, pageData, {
         headers: {
-          Authorization: `Bearer ${this.platforms.notion.apiKey}`,
-          'Content-Type': 'application/json',
-          'Notion-Version': '2022-06-28'
+          "Authorization": `Bearer ${apiKey}`,
+          "Notion-Version": "2022-06-28",
+          "Content-Type": "application/json"
         }
-      }
-    );
-    
-    return response.data.id;
+      });
+      
+      const pageUrl = response.data.url;
+      const pageId = response.data.id;
+      
+      console.log(`✅ Notion page created: ${pageId}`);
+      console.log(`🔗 Notion URL: ${pageUrl}`);
+      
+      return pageId;
+      
+    } catch (error) {
+      console.error("❌ Notion Export fehlgeschlagen:", error.response?.data || error.message);
+      throw error;
+    }
   }
 
   /**
@@ -736,23 +776,34 @@ Use this content to manually create a Miro board if API access is unavailable.
    * Update Notion via API
    */
   async updateNotionAPI(updates) {
+    const blocksToAdd = [];
+    
     for (const update of updates) {
       const blockData = this.createNotionBlock(update);
-      
-      await axios.patch(
-        `${this.platforms.notion.baseUrl}/blocks/${this.state.activeNotionPageId}/children`,
-        { children: [blockData] },
-        {
-          headers: {
-            Authorization: `Bearer ${this.platforms.notion.apiKey}`,
-            'Content-Type': 'application/json',
-            'Notion-Version': '2022-06-28'
-          }
-        }
-      );
+      blocksToAdd.push(blockData);
     }
     
-    console.log(`✅ Updated Notion page via API with ${updates.length} items`);
+    if (blocksToAdd.length > 0) {
+      try {
+        // Use POST to append children blocks - this is the correct way
+        await axios.post(
+          `${this.platforms.notion.baseUrl}/blocks/${this.state.activeNotionPageId}/children`,
+          { children: blocksToAdd },
+          {
+            headers: {
+              Authorization: `Bearer ${this.platforms.notion.apiKey}`,
+              'Content-Type': 'application/json',
+              'Notion-Version': '2022-06-28'
+            }
+          }
+        );
+        
+        console.log(`✅ Updated Notion page via API with ${updates.length} items`);
+      } catch (error) {
+        console.error("❌ Notion API update failed:", error.response?.data || error.message);
+        throw error;
+      }
+    }
   }
 
   /**

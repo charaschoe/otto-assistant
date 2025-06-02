@@ -14,10 +14,12 @@ def is_valid_audio_file(file_path):
         print(f"Warnung: Datei ist größer als 100MB: {file_path}")
         return False
     
-    # Überprüfe MIME-Typ
-    mime_type, _ = mimetypes.guess_type(file_path)
-    if mime_type is None or not mime_type.startswith('audio/'):
-        print(f"Warnung: Datei scheint keine Audiodatei zu sein: {file_path}")
+    # Überprüfe Dateiendung (MIME-Type ist unreliable für WAV)
+    valid_extensions = ['.wav', '.mp3', '.m4a', '.flac', '.ogg', '.wma']
+    file_extension = os.path.splitext(file_path)[1].lower()
+    
+    if file_extension not in valid_extensions:
+        print(f"Warnung: Unsupported audio format: {file_path} (Extension: {file_extension})")
         return False
     
     return True
