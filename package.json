@@ -14,8 +14,9 @@
     "otto-export": "./bin/otto-export"
   },
   "scripts": {
-    "start": "node bin/otto-live",
+    "start": "node live-mode-simple.js",
     "live": "node bin/otto-live",
+    "live-simple": "node live-mode-simple.js",
     "debug": "node bin/otto-debug",
     "export": "node bin/otto-export",
     "test": "npm run test:unit && npm run test:integration",

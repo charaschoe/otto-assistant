@@ -17,7 +17,7 @@ class SimpleLiveRecorder extends EventEmitter {
       chunkDuration: options.chunkDuration || 3000,  // 3 seconds
       sampleRate: options.sampleRate || 16000,
       channels: options.channels || 1,
-      enableSimulation: options.enableSimulation !== false,
+      enableSimulation: options.enableSimulation === true,  // Simulation nur wenn explizit aktiviert
       ...options
     };
     
@@ -56,9 +56,11 @@ class SimpleLiveRecorder extends EventEmitter {
       // Start continuous recording
       await this.startContinuousRecording();
       
-      // Start simulation if enabled
+      // Start simulation if enabled, otherwise use real transcription
       if (this.config.enableSimulation) {
         this.startTranscriptionSimulation();
+      } else {
+        console.log("🎤 Real-time Whisper transcription enabled");
       }
       
       console.log("✅ Live recording active - speak naturally!");
@@ -240,6 +242,11 @@ class SimpleLiveRecorder extends EventEmitter {
         size: wavData.length
       });
       
+      // If real transcription is enabled, transcribe the chunk
+      if (!this.config.enableSimulation) {
+        this.transcribeAudioChunk(filepath, chunkNumber);
+      }
+      
     } catch (error) {
       console.warn("⚠️ Could not save audio chunk:", error.message);
     }
@@ -316,6 +323,134 @@ class SimpleLiveRecorder extends EventEmitter {
       }
       
     }, 4000); // Every 4 seconds
+  }
+
+  /**
+   * Transcribe audio chunk with Whisper
+   */
+  async transcribeAudioChunk(audioFilePath, chunkNumber) {
+    try {
+      console.log(`🔄 Transcribing chunk ${chunkNumber} with faster-whisper...`);
+      
+      // Create a simple Python script to use faster-whisper
+      const pythonScript = `
+import sys
+from faster_whisper import WhisperModel
+
+model = WhisperModel("base", device="cpu", compute_type="int8")
+segments, info = model.transcribe("${audioFilePath}", language="de")
+
+text = ""
+for segment in segments:
+    text += segment.text + " "
+
+print(text.strip())
+`;
+
+      const fs = require('fs');
+      const scriptPath = `${this.tempDir}/transcribe_${chunkNumber}.py`;
+      fs.writeFileSync(scriptPath, pythonScript);
+
+      const whisperProcess = spawn('python', [scriptPath]);
+      
+      let transcriptionText = '';
+      
+      whisperProcess.stdout.on('data', (data) => {
+        transcriptionText += data.toString();
+      });
+
+      whisperProcess.on('close', (code) => {
+        // Cleanup script file
+        const fs = require('fs');
+        const scriptPath = `${this.tempDir}/transcribe_${chunkNumber}.py`;
+        if (fs.existsSync(scriptPath)) {
+          fs.unlinkSync(scriptPath);
+        }
+        
+        if (code === 0) {
+          const cleanText = transcriptionText.trim();
+          
+          if (cleanText && cleanText.length > 0 && this.isValidTranscription(cleanText)) {
+            console.log(`🗣️ faster-whisper [Chunk ${chunkNumber}]: "${cleanText}"`);
+            
+            this.emit('transcription', {
+              text: cleanText,
+              timestamp: Date.now(),
+              confidence: this.estimateConfidence(cleanText),
+              isSimulated: false,
+              chunkNumber: chunkNumber
+            });
+          } else {
+            console.log(`🔇 No valid speech detected in chunk ${chunkNumber}`);
+          }
+        } else {
+          console.warn(`⚠️ faster-whisper process exited with code ${code} for chunk ${chunkNumber}`);
+        }
+        
+        // Cleanup audio file
+        if (fs.existsSync(audioFilePath)) {
+          fs.unlinkSync(audioFilePath);
+        }
+      });
+
+      whisperProcess.on('error', (error) => {
+        console.error(`❌ faster-whisper transcription error for chunk ${chunkNumber}:`, error);
+        
+        // Cleanup script file on error
+        const fs = require('fs');
+        const scriptPath = `${this.tempDir}/transcribe_${chunkNumber}.py`;
+        if (fs.existsSync(scriptPath)) {
+          fs.unlinkSync(scriptPath);
+        }
+      });
+
+    } catch (error) {
+      console.error(`❌ Transcription failed for chunk ${chunkNumber}:`, error);
+    }
+  }
+
+  /**
+   * Check if transcription is valid (not Whisper artifacts)
+   */
+  isValidTranscription(text) {
+    const invalidPatterns = [
+      /^[\s\.,;!?\-]*$/,           // Only punctuation/whitespace
+      /^(uh|uhm|äh|ähm)+[\s\.,]*$/i, // Only filler words
+      /^\[[^\]]*\]$/,              // Only [brackets]
+      /^[a-z]$/,                   // Single lowercase letter
+      /^\d+$/                      // Only numbers
+    ];
+    
+    const cleaned = text.trim();
+    
+    // Must have minimum length
+    if (cleaned.length < 3) return false;
+    
+    // Check against invalid patterns
+    return !invalidPatterns.some(pattern => pattern.test(cleaned));
+  }
+
+  /**
+   * Estimate transcription confidence based on text characteristics
+   */
+  estimateConfidence(text) {
+    let confidence = 0.8; // Base confidence
+    
+    // Longer text generally more reliable
+    if (text.length > 20) confidence += 0.1;
+    if (text.length > 50) confidence += 0.1;
+    
+    // Proper capitalization and punctuation
+    if (/^[A-ZÄÖÜ]/.test(text)) confidence += 0.05;
+    if (/[.!?]$/.test(text)) confidence += 0.05;
+    
+    // Contains common German words
+    const germanWords = ['der', 'die', 'das', 'und', 'ist', 'ich', 'wir', 'sie', 'haben', 'sind'];
+    if (germanWords.some(word => text.toLowerCase().includes(word))) {
+      confidence += 0.1;
+    }
+    
+    return Math.min(confidence, 1.0);
   }
 
   /**

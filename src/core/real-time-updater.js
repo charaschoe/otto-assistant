@@ -239,11 +239,13 @@ class RealTimeUpdater {
       boardData.team = { id: this.platforms.miro.teamId };
     }
     
+    console.log('🧪 Creating Miro board with data:', JSON.stringify(boardData, null, 2));
+    
     const response = await axios.post(
       `${this.platforms.miro.baseUrl}/boards`,
       boardData,
       {
-        headers: { 
+        headers: {
           Authorization: `Bearer ${this.platforms.miro.apiKey}`,
           'Content-Type': 'application/json'
         }
@@ -251,6 +253,8 @@ class RealTimeUpdater {
     );
     
     const boardId = response.data.id;
+    console.log(`✅ Miro board created with ID: ${boardId}`);
+    console.log(`🔗 Board URL: ${response.data.viewLink}`);
     
     // Create initial structure for live updates
     await this.createLiveMiroStructure(boardId);

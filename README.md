@@ -57,19 +57,22 @@ sudo apt-get install sox alsa-utils
 
 # Install required audio tools (Windows)
 # Download SoX from http://sox.sourceforge.net/
+
+# Install OpenAI Whisper for real-time transcription
+pip install openai-whisper
 ```
 
 ### Basic Usage
 
 ```bash
-# Start live mode with all integrations
-otto-live
+# Start live mode with real-time transcription
+node live-mode-simple.js
 
-# Test with simulation mode (no real audio)
-otto-live --simulation
+# Start full live mode with all integrations
+node live-mode.js
 
 # Debug system and check compatibility
-otto-debug
+node debug-microphone.js
 
 # Export existing content to multiple platforms
 otto-export --input session.md --all
@@ -77,10 +80,224 @@ otto-export --input session.md --all
 
 ### First Run
 
-1. **System Check**: Run `otto-debug` to verify all dependencies
-2. **Configuration**: Create `config.json` with your API keys (optional)
-3. **Test Audio**: Use `otto-live --simulation` to test the system
-4. **Go Live**: Run `otto-live` and start speaking!
+1. **System Check**: Run `node debug-microphone.js` to verify audio setup
+2. **Install Whisper**: `pip install openai-whisper` for real transcription
+3. **Configuration**: Create `config.json` with your API keys (optional)
+4. **Go Live**: Run `node live-mode-simple.js` and start speaking!
+
+## 🎤 Live Mode - Real Data Setup
+
+Otto Live Mode has been upgraded from simulation to **real-time Whisper transcription**. Here's everything you need to know:
+
+### Whisper Installation & Setup
+
+#### Standard Installation (Recommended)
+```bash
+pip install openai-whisper
+```
+
+#### Alternative Installation Methods
+```bash
+# With Conda
+conda install -c conda-forge openai-whisper
+
+# Development Version
+pip install git+https://github.com/openai/whisper.git
+```
+
+#### Dependencies
+Whisper requires:
+- Python 3.8+
+- PyTorch
+- FFmpeg
+
+#### FFmpeg Installation
+```bash
+# macOS
+brew install ffmpeg
+
+# Ubuntu/Debian
+sudo apt install ffmpeg
+
+# Windows
+# Download from https://ffmpeg.org/download.html
+```
+
+### Available Whisper Models
+
+Otto uses the `base` model by default for optimal performance:
+
+| Model  | Parameters | VRAM | Speed | Accuracy |
+|--------|------------|------|-------|----------|
+| tiny   | 39M        | ~1GB | Very fast | Low |
+| base   | 74M        | ~1GB | Fast | Medium |
+| small  | 244M       | ~2GB | Medium | Good |
+| medium | 769M       | ~5GB | Slow | Very good |
+| large  | 1550M      | ~10GB| Very slow | Best |
+
+### Live Mode Usage
+
+```bash
+# Start simple live mode with real Whisper transcription
+node live-mode-simple.js
+
+# Start full live mode with all features
+node live-mode.js
+
+# Test that real data is working (not simulation)
+node test-live-real-mode.js
+```
+
+### How to Stop Live Mode
+
+#### 🎯 Recommended Methods (in order):
+
+**1. Keyboard Commands (Terminal)**
+```bash
+Ctrl+C          # Graceful stop with final export (recommended)
+Cmd+C           # macOS alternative
+Ctrl+Z          # Pauses the process
+```
+
+**2. Voice Commands**
+Speak one of these commands:
+- **"Meeting ende"** - Stops after 2 seconds with final export
+- **"Session ende"** - Stops after 2 seconds with final export
+- **"Stop listening"** - Pauses audio processing
+
+**3. Emergency Stop (if terminal is blocked)**
+
+Open a new terminal and run:
+```bash
+# Find Live Mode processes
+ps aux | grep -E "(live-mode|otto|node.*live)"
+
+# Stop specific process
+kill -TERM <PROCESS_ID>
+
+# Force kill if needed
+kill -9 <PROCESS_ID>
+
+# Stop all Node.js live processes
+pkill -f "node.*live"
+```
+
+**4. Stop Audio Processes**
+```bash
+# Stop SoX audio recorder
+pkill -f "sox.*coreaudio"
+
+# Stop Whisper processes
+pkill -f "whisper"
+```
+
+**5. System Monitor (macOS)**
+1. Open Activity Monitor
+2. Search for "node", "live-mode", "sox", or "whisper"
+3. Select process and click "Force Quit"
+
+#### What Happens When Stopping?
+
+**Graceful Stop (Ctrl+C):**
+✅ Finalizes current session
+✅ Exports final content to all platforms
+✅ Cleans up temp files
+✅ Closes audio stream properly
+
+**Force Kill (kill -9):**
+❌ No final export
+❌ Temp files remain
+❌ Audio stream abruptly ended
+
+#### Cleanup After Force Kill
+
+If you had to force kill:
+```bash
+# Clean temp files
+rm -rf temp/live-audio/*
+rm -rf temp/whisper-stream/*
+
+# Check for hanging audio processes
+pkill -f "sox.*coreaudio"
+pkill -f "whisper"
+```
+
+#### Emergency Stop Sequence
+
+If nothing works:
+1. **Ctrl+C** (multiple times)
+2. **Ctrl+Z** then `kill %1`
+3. **Close terminal**
+4. **New terminal:** `pkill -f "node.*live"`
+5. **System reboot** (last resort)
+
+### Verifying Installation
+
+Test Whisper installation:
+```bash
+whisper --help
+```
+
+Test Otto integration:
+```bash
+node test-live-real-mode.js
+```
+
+Check system status:
+```bash
+# Check if Live Mode is running
+ps aux | grep -E "(live-mode|sox.*coreaudio|whisper)"
+
+# Check microphone access
+lsof | grep -i "coreaudio\|microphone"
+```
+
+### Configuration
+
+#### Change Whisper Model
+Edit `src/core/simple-live-recorder.js` line 317:
+```javascript
+'--model', 'base',  // Change to 'small', 'medium', etc.
+```
+
+#### Change Language
+```javascript
+'--language', 'German',  // Or 'English', 'French', etc.
+```
+
+### Troubleshooting
+
+#### "whisper command not found"
+```bash
+# Check Python PATH
+which python
+python -m pip show openai-whisper
+
+# Add to PATH if needed
+export PATH="$PATH:$(python -m site --user-base)/bin"
+```
+
+#### Microphone Permission (macOS)
+- System Preferences → Security & Privacy → Privacy → Microphone
+- Enable Terminal/Node.js
+
+#### Performance Optimization
+- Use `tiny` or `base` model for real-time
+- Enable GPU acceleration (if available)
+- Reduce `chunkDuration` for lower latency
+
+### Live Mode Status
+
+✅ **Completed:**
+- Pseudo-data simulation removed
+- Real audio recording activated
+- Whisper integration implemented
+- Voice Activity Detection functional
+- Real-time board updates active
+
+⏳ **Requires:**
+- Whisper installation by user
+- First live test session
 
 ## 📖 Documentation
 

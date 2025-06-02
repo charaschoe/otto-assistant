@@ -181,27 +181,24 @@ async function createOptimizedBoard(apiKey, teamId, options) {
   const boardData = {
     name: `Otto Creative Session - ${new Date().toLocaleDateString('de-DE', {
       year: 'numeric',
-      month: 'long', 
+      month: 'long',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
     })}`,
-    description: "Auto-generated board optimized for large office displays",
-    policy: {
-      permissionsPolicy: {
-        collaborationToolsStartAccess: "all_editors",
-        copyAccess: "team_members_with_editing_rights",
-        sharingAccess: "team_members_with_editing_rights"
-      }
-    }
+    description: "Auto-generated board optimized for large office displays"
   };
   
-  if (teamId) {
+  // Only add team if teamId is valid format (numeric string)
+  if (teamId && /^\d+$/.test(teamId)) {
     boardData.team = { id: teamId };
   }
   
   const response = await axios.post(`${MIRO_API_BASE}/boards`, boardData, {
-    headers: { Authorization: `Bearer ${apiKey}` }
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json'
+    }
   });
   
   return response.data;
@@ -483,16 +480,21 @@ async function createStickyNote(boardId, apiKey, noteData) {
       content: noteData.content
     },
     style: {
-      fillColor: noteData.style?.fillColor || LAYOUT_CONFIG.COLORS.NEUTRAL,
-      textAlign: noteData.style?.textAlign || "left",
-      textAlignVertical: noteData.style?.textAlignVertical || "top"
+      fillColor: noteData.style?.fillColor || LAYOUT_CONFIG.COLORS.NEUTRAL
     },
     position: noteData.position
   };
   
+  // Add width/height if provided
+  if (noteData.width) stickyData.width = noteData.width;
+  if (noteData.height) stickyData.height = noteData.height;
+  
   try {
     await axios.post(`${MIRO_API_BASE}/boards/${boardId}/sticky_notes`, stickyData, {
-      headers: { Authorization: `Bearer ${apiKey}` }
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      }
     });
   } catch (error) {
     console.warn(`⚠️ Could not create sticky note: ${error.response?.data?.message || error.message}`);
