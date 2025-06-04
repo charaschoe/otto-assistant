@@ -50,17 +50,17 @@
           <!-- Mitglieder -->
           <div class="bg-white p-6 rounded-lg shadow-sm">
             <h2 class="font-semibold text-lg mb-4">Mitglieder</h2>
-            <div class="flex flex-col gap-4">
-              <div class="flex items-center gap-2">
-                <img src="https://randomuser.me/api/portraits/men/32.jpg" class="w-8 h-8 rounded-full"/>
+            <div class="flex flex-col gap-8">
+              <div class="flex items-center gap-4 leading-none">
+                <img src="https://randomuser.me/api/portraits/men/32.jpg" class="w-8 h-8 rounded-full m-0 p-0"/>
                 <span class="text-base font-medium">Markus Rotman</span>
               </div>
-              <div class="flex items-center gap-2">
-                <img src="https://randomuser.me/api/portraits/women/44.jpg" class="w-8 h-8 rounded-full"/>
+              <div class="flex items-center gap-4 leading-none">
+                <img src="https://randomuser.me/api/portraits/women/44.jpg" class="w-8 h-8 rounded-full m-0 p-0"/>
                 <span class="text-base font-medium">Ayse Uldur</span>
               </div>
-              <div class="flex items-center gap-2">
-                <img src="https://randomuser.me/api/portraits/women/68.jpg" class="w-8 h-8 rounded-full"/>
+              <div class="flex items-center gap-4 leading-none">
+                <img src="https://randomuser.me/api/portraits/women/68.jpg" class="w-8 h-8 rounded-full m-0 p-0"/>
                 <span class="text-base font-medium">Samantha Kohl</span>
               </div>
             </div>
@@ -70,7 +70,7 @@
             <h2 class="font-semibold text-lg mb-4">Integrationen</h2>
             <div class="flex flex-col gap-2">
               <!-- Beispiel Integration: Notion -->
-              <div class="flex items-center border-b border-gray-200 pb-4 last:border-b-0">
+              <div class="flex items-center pb-4 last:pb-0">
                 <span class="w-10 h-10 flex items-center justify-center">
                   <img src="/images/notion.png" alt="Notion" class="w-8 h-8 object-contain" />
                 </span>
@@ -81,7 +81,7 @@
                 </span>
               </div>
               <!-- Beispiel Integration: Miro -->
-              <div class="flex items-center border-b border-gray-200 pb-4 last:border-b-0">
+              <div class="flex items-center pb-4 last:pb-0">
                 <span class="w-10 h-10 flex items-center justify-center">
                   <img src="/images/miro.png" alt="Miro" class="w-8 h-8 object-contain" />
                 </span>
@@ -92,7 +92,7 @@
                 </span>
               </div>
               <!-- Beispiel Integration: Obsidian (inaktiv) -->
-              <div class="flex items-center border-b border-gray-200 pb-4 last:border-b-0">
+              <div class="flex items-center pb-4 last:pb-0">
                 <span class="w-10 h-10 flex items-center justify-center">
                   <img src="/images/obsidian.png" alt="Obsidian" class="w-8 h-8 object-contain" />
                 </span>
@@ -107,21 +107,21 @@
           <!-- Beiträge -->
           <div class="bg-white p-6 rounded-lg shadow-sm">
             <h2 class="font-semibold text-lg mb-4">Beiträge</h2>
-            <div class="flex flex-col gap-4">
-              <div class="flex items-center gap-2">
-                <img src="https://randomuser.me/api/portraits/men/32.jpg" class="w-8 h-8 rounded-full"/>
+            <div class="flex flex-col gap-8">
+              <div class="flex items-center gap-4 leading-none">
+                <img src="https://randomuser.me/api/portraits/men/32.jpg" class="w-8 h-8 rounded-full m-0 p-0"/>
                 <span class="text-base font-medium">Markus Rotman</span>
-                <span class="ml-auto font-bold">33</span>
+                <span class="ml-auto text-base font-bold">33</span>
               </div>
-              <div class="flex items-center gap-2">
-                <img src="https://randomuser.me/api/portraits/women/44.jpg" class="w-8 h-8 rounded-full"/>
+              <div class="flex items-center gap-4 leading-none">
+                <img src="https://randomuser.me/api/portraits/women/44.jpg" class="w-8 h-8 rounded-full m-0 p-0"/>
                 <span class="text-base font-medium">Ayse Uldur</span>
-                <span class="ml-auto font-bold">21</span>
+                <span class="ml-auto text-base font-bold">21</span>
               </div>
-              <div class="flex items-center gap-2">
-                <img src="https://randomuser.me/api/portraits/women/68.jpg" class="w-8 h-8 rounded-full"/>
+              <div class="flex items-center gap-4 leading-none">
+                <img src="https://randomuser.me/api/portraits/women/68.jpg" class="w-8 h-8 rounded-full m-0 p-0"/>
                 <span class="text-base font-medium">Samantha Kohl</span>
-                <span class="ml-auto font-bold">15</span>
+                <span class="ml-auto text-base font-bold">15</span>
               </div>
             </div>
           </div>
@@ -186,7 +186,6 @@
                   <img src="/images/miro.png" alt="Miro" class="w-8 h-8 object-contain" />
                 </span>
                 <span class="text-base font-medium ml-2">Miro</span>
-                <a href="https://miro.com/abc" target="_blank" class="ml-2 text-gray-500 text-sm">miro.com/abc</a>
                 <span class="ml-auto flex items-center gap-2">
                   <svg class="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
                   <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
@@ -198,7 +197,6 @@
                   <img src="/images/obsidian.png" alt="Obsidian" class="w-8 h-8 object-contain" />
                 </span>
                 <span class="text-base font-medium ml-2">Obsidian</span>
-                <a href="https://obsidian.md/123" target="_blank" class="ml-2 text-gray-500 text-sm">obsidian.md/123</a>
                 <span class="ml-auto flex items-center gap-2">
                   <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
                   <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>

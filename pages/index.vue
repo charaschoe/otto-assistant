@@ -1,5 +1,10 @@
 <template>
-  <div class="min-h-screen bg-gray-100 flex flex-col">
+  <!-- MobileView nur auf kleinen Bildschirmen -->
+  <div class="block md:hidden">
+    <MobileView />
+  </div>
+  <!-- Desktop-Ansicht nur auf mittleren+ Bildschirmen -->
+  <div class="min-h-screen bg-gray-100 flex flex-col hidden md:block">
     <NavBar />
     <div class="flex justify-center pt-8">
       <div class="grid grid-cols-3 gap-8 w-full px-[6%]">
@@ -37,6 +42,7 @@
 <script setup>
 import { useRouter } from 'vue-router';
 import NavBar from "../components/NavBar.vue";
+import MobileView from "../components/MobileView.vue";
 
 const router = useRouter();
 
