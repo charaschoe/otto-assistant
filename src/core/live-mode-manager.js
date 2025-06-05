@@ -3,6 +3,9 @@
  * Orchestrates continuous speech recognition and real-time processing
  */
 
+// Lade .env Umgebungsvariablen
+require('dotenv').config();
+
 const LiveAudioProcessor = require('./live-audio-processor');
 const LiveInterface = require('./live-interface');
 const RealTimeUpdater = require('./real-time-updater');
@@ -453,7 +456,9 @@ class LiveModeManager {
       // Export to all platforms
       const results = await Promise.allSettled([
         exportToObsidian(this.state.sessionData.fullTranscript, summary, entities, entityEmojis),
-        exportToNotion(this.state.sessionData.fullTranscript, summary, entities, entityEmojis),
+        exportToNotion(summary, `Otto Live Session - ${new Date().toLocaleString().replace(/[/:]/g, '')}`, {
+          templateType: 'live-session'
+        }),
         exportToMiro(this.state.sessionData.fullTranscript, summary, {
           useOptimizedLayout: true,
           meetingType: 'Live Session'
@@ -478,12 +483,13 @@ class LiveModeManager {
    * Export to specific platforms only
    */
   async exportToMiroOnly() {
-    await this.exportToPlatform('Miro', () => 
-      exportToMiro(this.state.sessionData.fullTranscript, '', {
+    await this.exportToPlatform('Miro', async () => {
+      const summary = await generateSummaryFromTranscript(this.state.sessionData.fullTranscript);
+      return exportToMiro(this.state.sessionData.fullTranscript, summary, {
         useOptimizedLayout: true,
         meetingType: 'Live Session'
-      })
-    );
+      });
+    });
   }
 
   async exportToObsidianOnly() {
@@ -502,13 +508,10 @@ class LiveModeManager {
   async exportToNotionOnly() {
     await this.exportToPlatform('Notion', async () => {
       const summary = await generateSummaryFromTranscript(this.state.sessionData.fullTranscript);
-      const entities = this.state.sessionData.entities.map(e => e.name);
-      const entityEmojis = {};
-      this.state.sessionData.entities.forEach(e => {
-        entityEmojis[e.name] = e.emoji;
-      });
       
-      return exportToNotion(this.state.sessionData.fullTranscript, summary, entities, entityEmojis);
+      return exportToNotion(summary, `Otto Live Session - ${new Date().toLocaleString().replace(/[/:]/g, '')}`, {
+        templateType: 'live-session'
+      });
     });
   }
 

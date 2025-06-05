@@ -3,17 +3,20 @@
  * Vereinfacht für maximale Kompatibilität
  */
 
+// Lade .env Umgebungsvariablen
+require('dotenv').config();
+
 const fs = require("fs");
 const path = require("path");
 const axios = require("axios");
 
-// Lade Notion-API-Konfiguration aus config.json
+// Lade Notion-API-Konfiguration aus config.json (fallback)
 let config = {};
 try {
   const configPath = path.resolve(__dirname, "../../config.json");
   config = JSON.parse(fs.readFileSync(configPath, "utf8"));
 } catch (e) {
-  console.warn("⚠️ Konnte config.json nicht laden, Notion-Export deaktiviert.");
+  console.warn("⚠️ Konnte config.json nicht laden, verwende Umgebungsvariablen.");
 }
 
 const NOTION_API_BASE = "https://api.notion.com/v1";

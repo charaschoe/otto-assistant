@@ -3,19 +3,22 @@
  * Designed for optimal spacing, no overlapping, and clear visual presentation
  */
 
+// Lade .env Umgebungsvariablen
+require('dotenv').config();
+
 const fs = require("fs");
 const path = require("path");
 const axios = require("axios");
 const { extractEntities, identifyEntitiesWithEmojis } = require("../utils/entity-linker");
 const { creativeMiroSelector } = require("./miro-creative-templates");
 
-// Load configuration
+// Load configuration (fallback)
 let config = {};
 try {
   const configPath = path.resolve(__dirname, "../../config.json");
   config = JSON.parse(fs.readFileSync(configPath, "utf8"));
 } catch (e) {
-  console.warn("⚠️ Could not load config.json, Miro export disabled.");
+  console.warn("⚠️ Konnte config.json nicht laden, verwende Umgebungsvariablen.");
 }
 
 const MIRO_API_BASE = "https://api.miro.com/v2";
@@ -141,7 +144,7 @@ class LayoutCalculator {
  * Enhanced Miro board creation with optimal layout
  */
 async function exportToMiro(transcript, summary, options = {}) {
-  const apiKey = config.MIRO_API_KEY || process.env.MIRO_API_KEY;
+  const apiKey = config.MIRO_API_TOKEN || process.env.MIRO_API_TOKEN || config.MIRO_API_KEY || process.env.MIRO_API_KEY;
   const teamId = config.MIRO_TEAM_ID || process.env.MIRO_TEAM_ID;
   
   if (!apiKey) {
