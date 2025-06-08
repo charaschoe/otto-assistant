@@ -31,3 +31,4 @@ coverage/
 test-miro-*.js
 test-template-selection.js
 MIRO_API_STATUS.md
+obsidian-vault/.obsidian/
