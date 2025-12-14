@@ -225,5 +225,8 @@
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org/"
+  },
+  "overrides": {
+    "glob": "^10.5.0"
   }
 }
